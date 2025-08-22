@@ -1,0 +1,175 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7.0
+    container_name: edupredict-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: edupredict
+    volumes:
+      - mongodb_data:/data/db
+      - ./docker/mongodb/init-mongo.js:/docker-entrypoint-initdb.d/init-mongo.js:ro
+    networks:
+      - edupredict-network
+
+  # Redis for Celery
+  redis:
+    image: redis:7.2-alpine
+    container_name: edupredict-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - edupredict-network
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edupredict-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/edupredict?authSource=admin
+      - REDIS_URL=redis://redis:6379
+      - DEBUG=True
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - edupredict-network
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: edupredict-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost:8000/api/v1
+      - CHOKIDAR_USEPOLLING=true
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - edupredict-network
+    command: npm start
+
+  # Celery Worker (for background tasks)
+  celery-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edupredict-celery-worker
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/edupredict?authSource=admin
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - edupredict-network
+    command: celery -A app.core.celery worker --loglevel=info
+
+  # Celery Beat (for scheduled tasks)
+  celery-beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: edupredict-celery-beat
+    restart: unless-stopped
+    environment:
+      - MONGODB_URL=mongodb://admin:password123@mongodb:27017/edupredict?authSource=admin
+      - REDIS_URL=redis://redis:6379
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+    depends_on:
+      - mongodb
+      - redis
+    networks:
+      - edupredict-network
+    command: celery -A app.core.celery beat --loglevel=info
+
+  # Hadoop NameNode (for HDFS)
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: edupredict-namenode
+    restart: unless-stopped
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    volumes:
+      - hadoop_namenode:/hadoop/dfs/name
+    environment:
+      - CLUSTER_NAME=edupredict
+    env_file:
+      - ./docker/hadoop/hadoop.env
+    networks:
+      - edupredict-network
+
+  # Hadoop DataNode (for HDFS)
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: edupredict-datanode
+    restart: unless-stopped
+    volumes:
+      - hadoop_datanode:/hadoop/dfs/data
+    environment:
+      SERVICE_PRECONDITION: "namenode:9870"
+    env_file:
+      - ./docker/hadoop/hadoop.env
+    depends_on:
+      - namenode
+    networks:
+      - edupredict-network
+
+  # Impala Daemon (for big data queries)
+  impala:
+    image: apache/impala:4.1.0
+    container_name: edupredict-impala
+    restart: unless-stopped
+    ports:
+      - "21050:21050"
+      - "25000:25000"
+    environment:
+      - IMPALA_STATE_STORE_HOST=impala
+      - IMPALA_CATALOG_SERVICE_HOST=impala
+    depends_on:
+      - namenode
+      - datanode
+    networks:
+      - edupredict-network
+
+volumes:
+  mongodb_data:
+  redis_data:
+  hadoop_namenode:
+  hadoop_datanode:
+
+networks:
+  edupredict-network:
+    driver: bridge
