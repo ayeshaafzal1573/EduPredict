@@ -73,6 +73,200 @@ async def get_courses(
         )
 
 @router.get("/{course_id}", response_model=Course)
+async def get_course_by_id(
+    course_id: str,
+    current_user: TokenData = Depends(get_current_user)
+) -> Course:
+    """Get a specific course by ID"""
+    try:
+        course = await course_service.get_course_by_id(course_id)
+        if not course:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Course not found"
+            )
+        return course
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get course: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve course"
+        )
+
+@router.post("/", response_model=Course)
+async def create_course(
+    course_data: CourseCreate,
+    current_user: TokenData = Depends(get_current_user)
+) -> Course:
+    """Create a new course"""
+    try:
+        # Only teachers and admins can create courses
+        if current_user.role not in ["teacher", "admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Teacher or Admin role required."
+            )
+
+        course = await course_service.create_course(course_data, current_user.sub)
+        return course
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create course: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create course"
+        )
+
+@router.put("/{course_id}", response_model=Course)
+async def update_course(
+    course_id: str,
+    course_update: CourseUpdate,
+    current_user: TokenData = Depends(get_current_user)
+) -> Course:
+    """Update a course"""
+    try:
+        # Only teachers and admins can update courses
+        if current_user.role not in ["teacher", "admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Teacher or Admin role required."
+            )
+
+        updated_course = await course_service.update_course(course_id, course_update)
+        return updated_course
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update course: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update course"
+        )
+
+@router.delete("/{course_id}")
+async def delete_course(
+    course_id: str,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Delete a course"""
+    try:
+        # Only admins can delete courses
+        if current_user.role != "admin":
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Admin role required."
+            )
+
+        success = await course_service.delete_course(course_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Course not found"
+            )
+
+        return {"message": "Course deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete course: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete course"
+        )
+
+@router.post("/{course_id}/enroll/{student_id}")
+async def enroll_student(
+    course_id: str,
+    student_id: str,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Enroll a student in a course"""
+    try:
+        # Only teachers and admins can enroll students
+        if current_user.role not in ["teacher", "admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Teacher or Admin role required."
+            )
+
+        success = await course_service.enroll_student(course_id, student_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to enroll student"
+            )
+
+        return {"message": "Student enrolled successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to enroll student: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to enroll student"
+        )
+
+@router.delete("/{course_id}/enroll/{student_id}")
+async def unenroll_student(
+    course_id: str,
+    student_id: str,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Unenroll a student from a course"""
+    try:
+        # Only teachers and admins can unenroll students
+        if current_user.role not in ["teacher", "admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Teacher or Admin role required."
+            )
+
+        success = await course_service.unenroll_student(course_id, student_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Failed to unenroll student"
+            )
+
+        return {"message": "Student unenrolled successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to unenroll student: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to unenroll student"
+        )
+
+@router.get("/{course_id}/students")
+async def get_course_students(
+    course_id: str,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Get list of students enrolled in a course"""
+    try:
+        # Only teachers and admins can view course students
+        if current_user.role not in ["teacher", "admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Teacher or Admin role required."
+            )
+
+        students = await course_service.get_course_students(course_id)
+        return students
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get course students: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve course students"
+        )
+
+@router.get("/{course_id}", response_model=Course)
 async def get_course(
     course_id: str,
     current_user: TokenData = Depends(get_current_user)

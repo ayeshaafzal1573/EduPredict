@@ -80,3 +80,69 @@ async def get_attendance(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve attendance records"
         )
+
+@router.get("/stats/{student_id}", response_model=dict)
+async def get_student_attendance_stats(
+    student_id: str,
+    course_id: Optional[str] = Query(None),
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Get attendance statistics for a student"""
+    try:
+        # Students can only see their own stats
+        if current_user.role == "student" and current_user.sub != student_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+
+        stats = await attendance_service.get_student_attendance_stats(
+            student_id=student_id,
+            course_id=course_id,
+            date_from=date_from,
+            date_to=date_to
+        )
+
+        return stats.model_dump()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get attendance stats: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve attendance statistics"
+        )
+
+@router.get("/course/{course_id}/summary")
+async def get_course_attendance_summary(
+    course_id: str,
+    date_from: Optional[date] = Query(None),
+    date_to: Optional[date] = Query(None),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Get attendance summary for a course"""
+    try:
+        # Only teachers and admins can access course summaries
+        if current_user.role not in ["teacher", "admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Teacher or Admin role required."
+            )
+
+        summary = await attendance_service.get_course_attendance_summary(
+            course_id=course_id,
+            date_from=date_from,
+            date_to=date_to
+        )
+
+        return summary
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get course attendance summary: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve course attendance summary"
+        )

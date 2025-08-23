@@ -18,33 +18,38 @@ const Layout = () => {
       case 'student':
         return [
           ...baseItems,
-          { name: 'My Performance', href: '/student/performance', icon: '📊' },
-          { name: 'Predictions', href: '/student/predictions', icon: '🔮' },
-          { name: 'Attendance', href: '/student/attendance', icon: '📅' },
+          { name: 'Performance', href: '/performance', icon: '📊' },
+          { name: 'Predictions', href: '/predictions', icon: '🔮' },
+          { name: 'Attendance', href: '/attendance', icon: '📅' },
+          { name: 'Courses', href: '/courses', icon: '📚' },
+          { name: 'Notifications', href: '/notifications', icon: '🔔' },
         ];
       case 'teacher':
         return [
           ...baseItems,
-          { name: 'My Classes', href: '/teacher/classes', icon: '👥' },
-          { name: 'Grade Entry', href: '/teacher/grades', icon: '✏️' },
-          { name: 'Attendance', href: '/teacher/attendance', icon: '📋' },
-          { name: 'Analytics', href: '/teacher/analytics', icon: '📈' },
+          { name: 'Classes', href: '/classes', icon: '👥' },
+          { name: 'Grades', href: '/grades', icon: '✏️' },
+          { name: 'Attendance', href: '/teacher-attendance', icon: '📋' },
+          { name: 'Analytics', href: '/teacher-analytics', icon: '📈' },
+          { name: 'Notifications', href: '/teacher-notifications', icon: '🔔' },
         ];
       case 'admin':
         return [
           ...baseItems,
-          { name: 'Users', href: '/admin/users', icon: '👥' },
-          { name: 'Courses', href: '/admin/courses', icon: '📚' },
-          { name: 'Analytics', href: '/admin/analytics', icon: '📊' },
-          { name: 'Reports', href: '/admin/reports', icon: '📄' },
+          { name: 'Users', href: '/users', icon: '👥' },
+          { name: 'Students', href: '/students', icon: '🎓' },
+          { name: 'Courses', href: '/admin-courses', icon: '📚' },
+          { name: 'Analytics', href: '/admin-analytics', icon: '📊' },
+          { name: 'Notifications', href: '/admin-notifications', icon: '🔔' },
         ];
       case 'analyst':
         return [
           ...baseItems,
-          { name: 'Analytics', href: '/analyst/analytics', icon: '📊' },
-          { name: 'ML Models', href: '/analyst/models', icon: '🤖' },
-          { name: 'Reports', href: '/analyst/reports', icon: '📈' },
-          { name: 'Tableau', href: '/analyst/tableau', icon: '📊' },
+          { name: 'Models', href: '/models', icon: '🤖' },
+          { name: 'Reports', href: '/reports', icon: '📈' },
+          { name: 'Predictions', href: '/analyst-predictions', icon: '🔮' },
+          { name: 'Tableau', href: '/tableau', icon: '📊' },
+          { name: 'Notifications', href: '/analyst-notifications', icon: '🔔' },
         ];
       default:
         return baseItems;
@@ -74,11 +79,10 @@ const Layout = () => {
               <Link
                 key={item.name}
                 to={item.href}
-                className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${
-                  location.pathname === item.href
+                className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${location.pathname === item.href
                     ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
                     : 'text-gray-700 hover:bg-white/60 hover:text-gray-900'
-                }`}
+                  }`}
               >
                 <span className="mr-3 text-lg">{item.icon}</span>
                 {item.name}

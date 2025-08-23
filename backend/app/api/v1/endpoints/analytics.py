@@ -16,6 +16,23 @@ router = APIRouter()
 analytics_service = AnalyticsService()
 ml_service = MLService()
 
+@router.get("/dashboard-stats/{role}")
+async def get_dashboard_stats(
+    role: str,
+    current_user: TokenData = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Get dashboard statistics for a specific role"""
+    try:
+        logger.info(f"Getting dashboard stats for role: {role}")
+        stats = await analytics_service.get_dashboard_stats(role, current_user.sub)
+        return stats
+    except Exception as e:
+        logger.error(f"Failed to get dashboard stats: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve dashboard statistics"
+        )
+
 @router.get("/dropout-prediction/{student_id}")
 async def get_dropout_prediction(
     student_id: str,

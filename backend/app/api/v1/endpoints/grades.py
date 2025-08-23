@@ -77,3 +77,115 @@ async def get_grades(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve grade records"
         )
+
+@router.get("/student/{student_id}/stats")
+async def get_student_grade_stats(
+    student_id: str,
+    course_id: Optional[str] = Query(None),
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Get grade statistics for a student"""
+    try:
+        # Students can only see their own stats
+        if current_user.role == "student" and current_user.sub != student_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied"
+            )
+
+        stats = await grade_service.get_student_grade_stats(
+            student_id=student_id,
+            course_id=course_id
+        )
+
+        return stats.model_dump()
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get grade stats: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve grade statistics"
+        )
+
+@router.get("/course/{course_id}/gradebook")
+async def get_course_gradebook(
+    course_id: str,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Get complete gradebook for a course"""
+    try:
+        # Only teachers and admins can access gradebooks
+        if current_user.role not in ["teacher", "admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Teacher or Admin role required."
+            )
+
+        gradebook = await grade_service.get_course_gradebook(course_id)
+        return gradebook
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get course gradebook: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve course gradebook"
+        )
+
+@router.put("/{grade_id}", response_model=Grade)
+async def update_grade(
+    grade_id: str,
+    grade_update: GradeUpdate,
+    current_user: TokenData = Depends(get_current_user)
+) -> Grade:
+    """Update a grade record"""
+    try:
+        # Only teachers and admins can update grades
+        if current_user.role not in ["teacher", "admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Teacher or Admin role required."
+            )
+
+        updated_grade = await grade_service.update_grade(grade_id, grade_update)
+        return updated_grade
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update grade: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update grade record"
+        )
+
+@router.delete("/{grade_id}")
+async def delete_grade(
+    grade_id: str,
+    current_user: TokenData = Depends(get_current_user)
+):
+    """Delete a grade record"""
+    try:
+        # Only teachers and admins can delete grades
+        if current_user.role not in ["teacher", "admin"]:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied. Teacher or Admin role required."
+            )
+
+        success = await grade_service.delete_grade(grade_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Grade record not found"
+            )
+
+        return {"message": "Grade deleted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to delete grade: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to delete grade record"
+        )
