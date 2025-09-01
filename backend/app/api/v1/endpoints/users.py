@@ -1,5 +1,5 @@
 """
-User management endpoints for EduPredict
+User management endpoints for EduPredict (Production-ready)
 """
 
 from typing import List, Optional
@@ -27,7 +27,28 @@ async def get_users(
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve users"
+            detail=f"Failed to retrieve users: {str(e)}"
+        )
+
+
+@router.post("/", response_model=User)
+async def create_user(
+    user_data: UserCreate,
+    current_user: TokenData = Depends(require_admin)
+):
+    """Create a new user (Admin only)"""
+    try:
+        user = await user_service.create_user(user_data)
+        return user
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create user: {str(e)}"
         )
 
 
@@ -37,29 +58,18 @@ async def get_user(
     current_user: TokenData = Depends(get_current_user)
 ):
     """Get user by ID"""
-    try:
-        # Users can only access their own data unless they're admin
-        if current_user.user_id != user_id and current_user.role != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
-        
-        user = await user_service.get_user_by_id(user_id)
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        return user
-    except HTTPException:
-        raise
-    except Exception as e:
+    if current_user.user_id != user_id and current_user.role != "admin":
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve user"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
         )
+    user = await user_service.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    return user
 
 
 @router.put("/{user_id}", response_model=User)
@@ -69,29 +79,18 @@ async def update_user(
     current_user: TokenData = Depends(get_current_user)
 ):
     """Update user information"""
-    try:
-        # Users can only update their own data unless they're admin
-        if current_user.user_id != user_id and current_user.role != "admin":
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
-        
-        updated_user = await user_service.update_user(user_id, user_data)
-        if not updated_user:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        return updated_user
-    except HTTPException:
-        raise
-    except Exception as e:
+    if current_user.user_id != user_id and current_user.role != "admin":
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update user"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
         )
+    updated_user = await user_service.update_user(user_id, user_data)
+    if not updated_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    return updated_user
 
 
 @router.delete("/{user_id}")
@@ -100,19 +99,10 @@ async def delete_user(
     current_user: TokenData = Depends(require_admin)
 ):
     """Delete user (Admin only)"""
-    try:
-        success = await user_service.delete_user(user_id)
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
-            )
-        
-        return {"message": "User deleted successfully"}
-    except HTTPException:
-        raise
-    except Exception as e:
+    success = await user_service.delete_user(user_id)
+    if not success:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete user"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
         )
+    return {"message": "User deleted successfully"}

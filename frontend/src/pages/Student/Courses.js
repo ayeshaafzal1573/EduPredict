@@ -17,9 +17,11 @@ const StudentCourses = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
+      // Always fetch from API - no fallback data in frontend
       const studentCourses = await coursesAPI.getCourses({ student_id: user.id });
       setCourses(studentCourses);
+
     } catch (err) {
       console.error('Error fetching courses:', err);
       setError('Failed to load courses. Please try again.');
@@ -77,9 +79,8 @@ const StudentCourses = () => {
                 <h3 className="text-xl font-bold text-gray-800">{course.name}</h3>
                 <p className="text-gray-600">{course.code}</p>
               </div>
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                course.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${course.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
                 {course.is_active ? 'Active' : 'Inactive'}
               </span>
             </div>

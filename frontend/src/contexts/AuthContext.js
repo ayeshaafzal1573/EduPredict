@@ -21,7 +21,6 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       const storedToken = localStorage.getItem('accessToken');
-      const storedRefreshToken = localStorage.getItem('refreshToken');
 
       if (storedToken) {
         try {
@@ -30,29 +29,10 @@ export const AuthProvider = ({ children }) => {
           setUser(userData);
           setToken(storedToken);
         } catch (error) {
-          // Token might be expired, try to refresh
-          if (storedRefreshToken) {
-            try {
-              const refreshResponse = await authAPI.refreshToken(storedRefreshToken);
-              localStorage.setItem('accessToken', refreshResponse.access_token);
-              localStorage.setItem('refreshToken', refreshResponse.refresh_token);
-
-              const userData = await authAPI.getCurrentUser();
-              setUser(userData);
-              setToken(refreshResponse.access_token);
-            } catch (refreshError) {
-              // Refresh failed, clear tokens
-              localStorage.removeItem('accessToken');
-              localStorage.removeItem('refreshToken');
-              setUser(null);
-              setToken(null);
-            }
-          } else {
-            // No refresh token, clear access token
-            localStorage.removeItem('accessToken');
-            setUser(null);
-            setToken(null);
-          }
+          // Token expired or invalid, clear it
+          localStorage.removeItem('accessToken');
+          setUser(null);
+          setToken(null);
         }
       }
       setLoading(false);
@@ -66,9 +46,8 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const response = await authAPI.login(email, password);
 
-      // Store tokens
+      // Store only access token (simplified)
       localStorage.setItem('accessToken', response.access_token);
-      localStorage.setItem('refreshToken', response.refresh_token);
 
       // Get user data
       const userData = await authAPI.getCurrentUser();
@@ -131,7 +110,6 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
     setUser(null);
     setToken(null);
     toast.success('Logged out successfully');

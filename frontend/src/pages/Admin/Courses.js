@@ -41,8 +41,10 @@ const AdminCourses = () => {
         params.semester = filterSemester;
       }
 
+      // Always fetch from API - no fallback data in frontend
       const fetchedCourses = await coursesAPI.getCourses(params);
       setCourses(fetchedCourses);
+
     } catch (err) {
       console.error('Error fetching courses:', err);
       setError('Failed to load courses. Please try again.');
@@ -54,6 +56,7 @@ const AdminCourses = () => {
 
   const fetchTeachers = async () => {
     try {
+      // Always fetch from API - no fallback data in frontend
       const fetchedTeachers = await usersAPI.getUsers({ role: 'teacher' });
       setTeachers(fetchedTeachers);
     } catch (err) {
@@ -74,7 +77,7 @@ const AdminCourses = () => {
         await coursesAPI.createCourse(formData);
         toast.success('Course created successfully');
       }
-      
+
       setShowModal(false);
       setSelectedCourse(null);
       resetForm();
@@ -342,7 +345,7 @@ const AdminCourses = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-6">
               {selectedCourse ? 'Edit Course' : 'Add New Course'}
             </h2>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -464,7 +467,7 @@ const AdminCourses = () => {
                   />
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-4 mt-6">
                 <button
                   type="button"

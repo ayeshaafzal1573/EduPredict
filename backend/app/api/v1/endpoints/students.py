@@ -4,27 +4,37 @@ Student management endpoints for EduPredict
 
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, status, Depends, Query
-
 from app.models.student import Student, StudentCreate, StudentUpdate, StudentPerformance
 from app.models.user import TokenData
 from app.core.security import get_current_user, require_teacher_or_admin
+from app.services.student_service import StudentService
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+student_service = StudentService()
 
 
 @router.get("/", response_model=List[Student])
 async def get_students(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    department: Optional[str] = Query(None),
-    program: Optional[str] = Query(None),
+    major: Optional[str] = Query(None),
+    academic_year: Optional[str] = Query(None),
     current_user: TokenData = Depends(require_teacher_or_admin)
 ):
-    """Get list of students"""
+    """Get list of students with optional filtering"""
     try:
-        # Mock response for now
-        return []
+        students = await student_service.get_students(
+            skip=skip,
+            limit=limit,
+            major=major,
+            academic_year=academic_year
+        )
+        return students
     except Exception as e:
+        logger.error(f"Failed to retrieve students: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve students"
@@ -36,19 +46,18 @@ async def create_student(
     student_data: StudentCreate,
     current_user: TokenData = Depends(require_teacher_or_admin)
 ):
-    """Create new student"""
+    """Create a new student"""
     try:
-        # Mock response for now
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Student creation not implemented yet"
+        student = await student_service.create_student(
+            student_data=student_data,
+            created_by=current_user.id
         )
-    except HTTPException:
-        raise
+        return student
     except Exception as e:
+        logger.error(f"Failed to create student: {str(e)}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create student"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
         )
 
 
@@ -59,17 +68,53 @@ async def get_student(
 ):
     """Get student by ID"""
     try:
-        # Mock response for now
+        student = await student_service.get_student_by_id(student_id)
+        return student
+    except Exception as e:
+        logger.error(f"Failed to get student {student_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Student not found"
         )
-    except HTTPException:
-        raise
+
+
+@router.put("/{student_id}", response_model=Student)
+async def update_student(
+    student_id: str,
+    student_update: StudentUpdate,
+    current_user: TokenData = Depends(require_teacher_or_admin)
+):
+    """Update an existing student"""
+    try:
+        student = await student_service.update_student(student_id, student_update)
+        return student
     except Exception as e:
+        logger.error(f"Failed to update student {student_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.delete("/{student_id}", response_model=dict)
+async def delete_student(
+    student_id: str,
+    current_user: TokenData = Depends(require_teacher_or_admin)
+):
+    """Soft delete a student"""
+    try:
+        success = await student_service.delete_student(student_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Student not found"
+            )
+        return {"message": "Student deleted successfully"}
+    except Exception as e:
+        logger.error(f"Failed to delete student {student_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve student"
+            detail="Failed to delete student"
         )
 
 
@@ -80,15 +125,28 @@ async def get_student_performance(
 ):
     """Get student performance metrics"""
     try:
-        # Mock response for now
-        raise HTTPException(
-            status_code=status.HTTP_501_NOT_IMPLEMENTED,
-            detail="Performance metrics not implemented yet"
-        )
-    except HTTPException:
-        raise
+        perf_summary = await student_service.get_student_performance_summary(student_id)
+        return StudentPerformance(**perf_summary)
     except Exception as e:
+        logger.error(f"Failed to get performance for student {student_id}: {str(e)}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve performance metrics"
+        )
+
+
+@router.get("/at-risk", response_model=List[dict])
+async def get_at_risk_students(
+    limit: int = Query(50, ge=1, le=200),
+    current_user: TokenData = Depends(require_teacher_or_admin)
+):
+    """Get list of at-risk students"""
+    try:
+        students = await student_service.get_at_risk_students(limit=limit)
+        return students
+    except Exception as e:
+        logger.error(f"Failed to get at-risk students: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve at-risk students"
         )

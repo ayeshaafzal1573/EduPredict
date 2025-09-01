@@ -17,9 +17,11 @@ const StudentNotifications = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
+      // Always fetch from API - no fallback data in frontend
       const userNotifications = await notificationsAPI.getNotifications({ user_id: user.id });
       setNotifications(userNotifications);
+
     } catch (err) {
       console.error('Error fetching notifications:', err);
       setError('Failed to load notifications. Please try again.');
@@ -32,9 +34,9 @@ const StudentNotifications = () => {
   const markAsRead = async (notificationId) => {
     try {
       await notificationsAPI.markAsRead(notificationId);
-      setNotifications(prev => 
-        prev.map(notif => 
-          notif.id === notificationId 
+      setNotifications(prev =>
+        prev.map(notif =>
+          notif.id === notificationId
             ? { ...notif, is_read: true }
             : notif
         )
@@ -121,9 +123,8 @@ const StudentNotifications = () => {
         {notifications.map((notification) => (
           <div
             key={notification.id}
-            className={`bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20 transition-all duration-200 ${
-              !notification.is_read ? 'ring-2 ring-blue-200' : ''
-            }`}
+            className={`bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20 transition-all duration-200 ${!notification.is_read ? 'ring-2 ring-blue-200' : ''
+              }`}
           >
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-4">

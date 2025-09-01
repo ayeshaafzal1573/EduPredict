@@ -19,7 +19,7 @@ const StudentAttendance = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch student's attendance records and courses
+      // Always fetch from APIs - no fallback data in frontend
       const [attendanceRecords, studentCourses] = await Promise.all([
         attendanceAPI.getAttendance({ student_id: user.id, limit: 200 }),
         coursesAPI.getCourses({ student_id: user.id })

@@ -8,6 +8,10 @@ const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,PUT,POST,DELETE,PATCH,OPTIONS',
+
   },
 });
 
@@ -20,46 +24,17 @@ apiClient.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle token refresh
+// Response interceptor (only handle 401 → logout)
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const originalRequest = error.config;
-
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
-      try {
-        const refreshToken = localStorage.getItem('refreshToken');
-        if (refreshToken) {
-          const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
-            headers: {
-              Authorization: `Bearer ${refreshToken}`,
-            },
-          });
-
-          const { access_token, refresh_token } = response.data;
-          localStorage.setItem('accessToken', access_token);
-          localStorage.setItem('refreshToken', refresh_token);
-
-          // Retry original request with new token
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
-          return apiClient(originalRequest);
-        }
-      } catch (refreshError) {
-        // Refresh failed, redirect to login
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
-      }
+    if (error.response?.status === 401) {
+      localStorage.removeItem('accessToken');
+      window.location.href = '/login';
     }
-
     return Promise.reject(error);
   }
 );
@@ -68,20 +43,18 @@ apiClient.interceptors.response.use(
 export const authAPI = {
   login: async (email, password) => {
     const response = await apiClient.post('/auth/login', { email, password });
+    const { access_token } = response.data;
+
+    // Save to localStorage for interceptors
+    if (access_token) {
+      localStorage.setItem('accessToken', access_token);
+    }
+
     return response.data;
   },
 
   register: async (userData) => {
     const response = await apiClient.post('/auth/register', userData);
-    return response.data;
-  },
-
-  refreshToken: async (refreshToken) => {
-    const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {}, {
-      headers: {
-        Authorization: `Bearer ${refreshToken}`,
-      },
-    });
     return response.data;
   },
 
@@ -91,35 +64,38 @@ export const authAPI = {
   },
 
   logout: async () => {
-    // Optional: Call logout endpoint if implemented
-    // await apiClient.post('/auth/logout');
     localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+    // Optional: await apiClient.post('/auth/logout');
   },
 };
+
 
 // Users API
 export const usersAPI = {
   getUsers: async (params = {}) => {
-    const response = await apiClient.get('/users', { params });
+    const response = await apiClient.get('/users/', { params });
     return response.data;
   },
-
+  createUser: async (userData) => {
+    const response = await apiClient.post('/users/', userData);
+    return response.data;
+  },
   getUserById: async (userId) => {
-    const response = await apiClient.get(`/users/${userId}`);
+    const response = await apiClient.get(`/users/${userId}/`);
     return response.data;
   },
 
   updateUser: async (userId, userData) => {
-    const response = await apiClient.put(`/users/${userId}`, userData);
+    const response = await apiClient.put(`/users/${userId}/`, userData);
     return response.data;
   },
 
   deleteUser: async (userId) => {
-    const response = await apiClient.delete(`/users/${userId}`);
+    const response = await apiClient.delete(`/users/${userId}/`);
     return response.data;
   },
 };
+
 
 // Students API
 export const studentsAPI = {

@@ -1,26 +1,10 @@
 """
-Database connections and utilities for MongoDB, HDFS, and Impala
+Database connections and utilities for MongoDB
 """
 
 import motor.motor_asyncio
-from pymongo import MongoClient
-from typing import Optional
 import asyncio
-
-# Optional imports for big data components
-try:
-    from impala.dbapi import connect as impala_connect
-    IMPALA_AVAILABLE = True
-except ImportError:
-    IMPALA_AVAILABLE = False
-    impala_connect = None
-
-try:
-    import hdfs3
-    HDFS_AVAILABLE = True
-except ImportError:
-    HDFS_AVAILABLE = False
-    hdfs3 = None
+from typing import Optional
 
 try:
     from loguru import logger
@@ -28,78 +12,71 @@ except ImportError:
     import logging
     logger = logging.getLogger(__name__)
 
-from app.core.config import settings, get_mongodb_url, get_hdfs_url, get_impala_connection_params
+from app.core.config import settings, get_mongodb_url
 
 
 class DatabaseManager:
     """Database connection manager"""
-    
+
     def __init__(self):
         self.mongodb_client: Optional[motor.motor_asyncio.AsyncIOMotorClient] = None
         self.mongodb_db = None
-        self.hdfs_client: Optional[hdfs3.HDFileSystem] = None
-        self.impala_connection = None
-    
+        
+        # In-memory data store for fallback
+        self.in_memory_data = {
+            'users': [],
+            'courses': [],
+            'students': [],
+            'grades': [],
+            'attendance': [],
+            'notifications': []
+        }
+        self.use_in_memory = False
+    async def _initialize_in_memory_data(self):
+        """Initialize in-memory database with default collections"""
+        self.in_memory_data = {
+            'users': [],
+            'courses': [],
+            'students': [],
+            'grades': [],
+            'attendance': [],
+            'notifications': []
+        }
+        logger.info("🗂️ In-memory database initialized")
     async def connect_mongodb(self):
         """Connect to MongoDB"""
         try:
             self.mongodb_client = motor.motor_asyncio.AsyncIOMotorClient(get_mongodb_url())
             self.mongodb_db = self.mongodb_client[settings.MONGODB_DB_NAME]
-            # Test connection
-            await self.mongodb_client.admin.command('ping')
-            logger.info("Connected to MongoDB successfully")
-        except Exception as e:
-            logger.error(f"Failed to connect to MongoDB: {e}")
-            raise
-    
-    def connect_hdfs(self):
-        """Connect to HDFS"""
-        if not HDFS_AVAILABLE:
-            logger.warning("HDFS not available - hdfs3 package not installed")
-            return
 
-        try:
-            self.hdfs_client = hdfs3.HDFileSystem(
-                host=settings.HDFS_HOST,
-                port=settings.HDFS_PORT,
-                user=settings.HDFS_USER
+            # Test connection with timeout
+            await asyncio.wait_for(
+                self.mongodb_client.admin.command('ping'),
+                timeout=5.0
             )
-            logger.info("Connected to HDFS successfully")
+            logger.info("✅ Connected to MongoDB successfully")
+            self.use_in_memory = False
+            return True
         except Exception as e:
-            logger.error(f"Failed to connect to HDFS: {e}")
-            # Don't raise - HDFS might not be available in development
-    
-    def connect_impala(self):
-        """Connect to Impala"""
-        if not IMPALA_AVAILABLE:
-            logger.warning("Impala not available - impyla package not installed")
-            return
+            logger.warning(f"⚠️ MongoDB unavailable ({e}) - switching to in-memory database")
+            self.mongodb_client = None
+            self.mongodb_db = None
+            self.use_in_memory = True
+            await self._initialize_in_memory_data()
+            return False
 
-        try:
-            params = get_impala_connection_params()
-            self.impala_connection = impala_connect(**params)
-            logger.info("Connected to Impala successfully")
-        except Exception as e:
-            logger.error(f"Failed to connect to Impala: {e}")
-            # Don't raise - Impala might not be available in development
-    
+  
+    def get_collection(self, collection_name: str):
+        """Return collection (MongoDB or in-memory fallback)"""
+        if self.use_in_memory:
+            return InMemoryCollection(self.in_memory_data, collection_name)
+        return self.mongodb_db[collection_name]
+
     async def close_mongodb(self):
         """Close MongoDB connection"""
         if self.mongodb_client:
             self.mongodb_client.close()
             logger.info("MongoDB connection closed")
-    
-    def close_hdfs(self):
-        """Close HDFS connection"""
-        if self.hdfs_client:
-            self.hdfs_client.disconnect()
-            logger.info("HDFS connection closed")
-    
-    def close_impala(self):
-        """Close Impala connection"""
-        if self.impala_connection:
-            self.impala_connection.close()
-            logger.info("Impala connection closed")
 
 
 # Global database manager instance
@@ -121,46 +98,84 @@ def get_database():
     return db_manager.mongodb_db
 
 
-def get_hdfs_client():
-    """Get HDFS client instance"""
-    if not db_manager.hdfs_client:
-        db_manager.connect_hdfs()
-    return db_manager.hdfs_client
-
-
-def get_impala_connection():
-    """Get Impala connection instance"""
-    if not db_manager.impala_connection:
-        db_manager.connect_impala()
-    return db_manager.impala_connection
-
-
 # Collection getters
 def get_users_collection():
-    """Get users collection"""
-    return get_database().users
+    return db_manager.get_collection("users")
 
 
 def get_students_collection():
-    """Get students collection"""
-    return get_database().students
+    return db_manager.get_collection("students")
 
 
 def get_courses_collection():
-    """Get courses collection"""
-    return get_database().courses
+    return db_manager.get_collection("courses")
 
 
 def get_attendance_collection():
-    """Get attendance collection"""
-    return get_database().attendance
+    return db_manager.get_collection("attendance")
 
 
 def get_grades_collection():
-    """Get grades collection"""
-    return get_database().grades
+    return db_manager.get_collection("grades")
 
 
 def get_notifications_collection():
-    """Get notifications collection"""
-    return get_database().notifications
+    return db_manager.get_collection("notifications")
+
+class InMemoryCollection:
+    """Simple in-memory collection that mimics MongoDB operations"""
+
+    def __init__(self, data_store, collection_name):
+        self.data_store = data_store
+        self.collection_name = collection_name
+        if collection_name not in self.data_store:
+            self.data_store[collection_name] = []
+
+    async def find(self, query=None, **kwargs):
+        data = self.data_store[self.collection_name]
+        if query is None:
+            return InMemoryCursor(data)
+        filtered_data = [doc for doc in data if self._matches_query(doc, query)]
+        return InMemoryCursor(filtered_data)
+
+    async def find_one(self, query=None):
+        data = self.data_store[self.collection_name]
+        if query is None:
+            return data[0] if data else None
+        for doc in data:
+            if self._matches_query(doc, query):
+                return doc
+        return None
+
+    async def insert_one(self, document):
+        import uuid
+        if "_id" not in document:
+            document["_id"] = str(uuid.uuid4())
+        self.data_store[self.collection_name].append(document)
+        return type('InsertResult', (), {'inserted_id': document["_id"]})()
+
+    def _matches_query(self, doc, query):
+        for key, value in query.items():
+            if doc.get(key) != value:
+                return False
+        return True
+
+
+class InMemoryCursor:
+    def __init__(self, data):
+        self.data = data
+        self._skip = 0
+        self._limit = None
+
+    def skip(self, count):
+        self._skip = count
+        return self
+
+    def limit(self, count):
+        self._limit = count
+        return self
+
+    async def to_list(self, length=None):
+        start = self._skip
+        end = start + (self._limit or len(self.data))
+        return self.data[start:end]

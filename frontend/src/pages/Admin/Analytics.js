@@ -20,6 +20,7 @@ const AdminAnalytics = () => {
       setLoading(true);
       setError(null);
 
+      // Always fetch from APIs - no fallback data in frontend
       const [dashboardStats, institutionAnalytics, atRiskStudents] = await Promise.all([
         analyticsAPI.getDashboardStats('admin'),
         analyticsAPI.getInstitutionAnalytics(),
@@ -151,11 +152,10 @@ const AdminAnalytics = () => {
               <button
                 key={tab.id}
                 onClick={() => setSelectedMetric(tab.id)}
-                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
-                  selectedMetric === tab.id
-                    ? 'border-red-500 text-red-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${selectedMetric === tab.id
+                  ? 'border-red-500 text-red-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <span className="mr-2">{tab.icon}</span>
                 {tab.name}
@@ -168,7 +168,7 @@ const AdminAnalytics = () => {
           {selectedMetric === 'overview' && (
             <div className="space-y-6">
               <h3 className="text-xl font-bold text-gray-800">Institution Overview</h3>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">Department Distribution</h4>
@@ -178,8 +178,8 @@ const AdminAnalytics = () => {
                         <span className="text-gray-700">{dept.name}</span>
                         <div className="flex items-center space-x-2">
                           <div className="w-24 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-red-500 h-2 rounded-full" 
+                            <div
+                              className="bg-red-500 h-2 rounded-full"
                               style={{ width: `${(dept.count / dashboardStats.total_students * 100)}%` }}
                             ></div>
                           </div>
@@ -187,8 +187,8 @@ const AdminAnalytics = () => {
                         </div>
                       </div>
                     )) || (
-                      <p className="text-gray-500">No department data available</p>
-                    )}
+                        <p className="text-gray-500">No department data available</p>
+                      )}
                   </div>
                 </div>
 
@@ -220,11 +220,11 @@ const AdminAnalytics = () => {
           {selectedMetric === 'performance' && (
             <div className="space-y-6">
               <h3 className="text-xl font-bold text-gray-800">Performance Analytics</h3>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl p-6 shadow-lg">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">GPA Trends</h4>
-                  <PerformanceChart 
+                  <PerformanceChart
                     data={institutionData.gpa_trends || []}
                     title="Institution GPA Over Time"
                   />
@@ -245,8 +245,8 @@ const AdminAnalytics = () => {
                         </div>
                       </div>
                     )) || (
-                      <p className="text-gray-500">No course performance data available</p>
-                    )}
+                        <p className="text-gray-500">No course performance data available</p>
+                      )}
                   </div>
                 </div>
               </div>
@@ -256,7 +256,7 @@ const AdminAnalytics = () => {
           {selectedMetric === 'enrollment' && (
             <div className="space-y-6">
               <h3 className="text-xl font-bold text-gray-800">Enrollment Analytics</h3>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6">
                   <h4 className="text-lg font-semibold text-blue-800 mb-2">Total Enrollment</h4>
@@ -290,7 +290,7 @@ const AdminAnalytics = () => {
           {selectedMetric === 'risk' && (
             <div className="space-y-6">
               <h3 className="text-xl font-bold text-gray-800">Risk Analysis</h3>
-              
+
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div className="bg-white rounded-xl p-6 shadow-lg">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4">At-Risk Students</h4>
@@ -324,8 +324,8 @@ const AdminAnalytics = () => {
                         <span className="text-gray-700">{factor.name}</span>
                         <div className="flex items-center space-x-2">
                           <div className="w-24 bg-gray-200 rounded-full h-2">
-                            <div 
-                              className="bg-red-500 h-2 rounded-full" 
+                            <div
+                              className="bg-red-500 h-2 rounded-full"
                               style={{ width: `${factor.percentage}%` }}
                             ></div>
                           </div>
@@ -333,8 +333,8 @@ const AdminAnalytics = () => {
                         </div>
                       </div>
                     )) || (
-                      <p className="text-gray-500">No risk factor data available</p>
-                    )}
+                        <p className="text-gray-500">No risk factor data available</p>
+                      )}
                   </div>
                 </div>
               </div>

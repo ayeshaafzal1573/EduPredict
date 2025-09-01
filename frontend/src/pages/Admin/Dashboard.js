@@ -18,8 +18,10 @@ const AdminDashboard = () => {
       setLoading(true);
       setError(null);
 
+      // Always fetch from API - no fallback data in frontend
       const stats = await analyticsAPI.getDashboardStats('admin');
       setDashboardData(stats);
+
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
       setError('Failed to load dashboard data. Please try again.');

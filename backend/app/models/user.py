@@ -88,16 +88,15 @@ class User(UserBase):
 class Token(BaseModel):
     """Token response model"""
     access_token: str
-    refresh_token: str
     token_type: str = "bearer"
     expires_in: int
 
 
 class TokenData(BaseModel):
-    """Token data model"""
     user_id: Optional[str] = None
     email: Optional[str] = None
     role: Optional[UserRole] = None
+    sub: Optional[str] = None   # add this for compatibility
 
 
 class LoginRequest(BaseModel):
