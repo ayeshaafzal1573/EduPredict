@@ -5,7 +5,7 @@ Essential Course service for EduPredict
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from bson import ObjectId
-from app.core.database import get_database
+from app.core.database import get_courses_collection, get_database
 from app.models.course import Course, CourseCreate, CourseUpdate
 from app.services.user_service import UserService
 import logging
@@ -18,7 +18,10 @@ class CourseService:
         self.user_service = UserService()
 
     def _get_collection(self):
-        return self.db.get_collection("courses")
+        """Dynamically fetch collection"""
+        return get_courses_collection()
+
+
 
     # ----- CRUD Operations -----
     async def create_course(self, course_data: CourseCreate, teacher_id: str) -> Course:

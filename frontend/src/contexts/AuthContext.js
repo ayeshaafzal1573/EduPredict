@@ -119,27 +119,7 @@ export const AuthProvider = ({ children }) => {
     setUser(prevUser => ({ ...prevUser, ...updatedUserData }));
   };
 
-  const refreshAuthToken = async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      if (!refreshToken) {
-        throw new Error('No refresh token available');
-      }
-
-      const response = await authAPI.refreshToken(refreshToken);
-
-      localStorage.setItem('accessToken', response.access_token);
-      localStorage.setItem('refreshToken', response.refresh_token);
-
-      setToken(response.access_token);
-
-      return response.access_token;
-    } catch (error) {
-      // Refresh failed, logout user
-      logout();
-      throw error;
-    }
-  };
+ 
 
   const value = {
     user,
@@ -149,7 +129,6 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateUser,
-    refreshAuthToken,
     isAuthenticated: !!user,
     isStudent: user?.role === 'student',
     isTeacher: user?.role === 'teacher',

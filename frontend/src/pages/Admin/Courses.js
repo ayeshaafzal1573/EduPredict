@@ -70,7 +70,7 @@ const AdminCourses = () => {
     try {
       if (selectedCourse) {
         // Update existing course
-        await coursesAPI.updateCourse(selectedCourse.id, formData);
+        await coursesAPI.updateCourse(selectedCourse._id, formData);
         toast.success('Course updated successfully');
       } else {
         // Create new course
@@ -315,7 +315,7 @@ const AdminCourses = () => {
                       Edit
                     </button>
                     <button
-                      onClick={() => handleDeleteCourse(course.id)}
+                      onClick={() => handleDeleteCourse(course._id)}
                       className="text-red-600 hover:text-red-900"
                     >
                       Delete

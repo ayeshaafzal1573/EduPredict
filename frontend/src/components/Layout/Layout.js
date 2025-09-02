@@ -37,9 +37,9 @@ const Layout = () => {
         return [
           ...baseItems,
           { name: 'Users', href: '/users', icon: '👥' },
-          { name: 'Courses', href: '/courses', icon: '📚' },
-          { name: 'Analytics', href: '/analytics', icon: '📊' },
-          { name: 'Notifications', href: '/notifications', icon: '🔔' },
+          { name: 'Courses', href: '/admin-courses', icon: '📚' },
+          { name: 'Analytics', href: '/admin-analytics', icon: '📊' },
+          { name: 'Notifications', href: '/admin-notifications', icon: '🔔' },
         ];
       default:
         return baseItems;
