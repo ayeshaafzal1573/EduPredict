@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class AnalyticsService:
     def __init__(self, db: AsyncIOMotorDatabase):
         self.db = db
-        self.user_service = UserService(db)
+        self.user_service = UserService()  
         self.student_service = StudentService(db)
 
     async def get_dashboard_stats(self, role: str, user_id: str) -> Dict[str, Any]:
