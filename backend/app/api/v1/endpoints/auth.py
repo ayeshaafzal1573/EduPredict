@@ -61,7 +61,6 @@ async def register(user_data: UserCreate):
 async def login(login_data: LoginRequest):
     try:
         print("🔹 Login attempt for:", login_data.email)
-        print("🔹 Using in-memory DB?", db_manager.use_in_memory)
         print("🔹 MongoDB DB instance:", db_manager.mongodb_db)
 
         # Try to list first few users to confirm DB connection

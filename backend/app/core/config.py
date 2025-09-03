@@ -3,9 +3,8 @@ Configuration settings for EduPredict application
 """
 
 from pydantic_settings import BaseSettings
-from typing import List, Optional
-import os
- 
+from typing import List
+
 
 class Settings(BaseSettings):
     """Application settings"""
@@ -20,11 +19,13 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
-    CORS_ALLOWED_ORIGINS: List[str] = ["http://localhost:3000",  "http://127.0.0.1:3000"]
+    # CORS
+    CORS_ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1", "0.0.0.0"]
-    # MongoDB
-    MONGODB_URL: str = "mongodb+srv://ayeshaafzal1573:bzRBxk5ae4TcuRO7@cluster0.c8tez.mongodb.net/edupredict?retryWrites=true&w=majority&appName=Cluster0"
-    MONGODB_DB_NAME: str = "edupredict"
+    
+    # MongoDB (must be in .env)
+    MONGODB_URL: str
+    MONGODB_DB_NAME: str
     
     # Hadoop/HDFS
     HDFS_HOST: str = "localhost"
@@ -36,7 +37,7 @@ class Settings(BaseSettings):
     IMPALA_PORT: int = 21050
     IMPALA_DATABASE: str = "edupredict"
     
-    # Email configuration
+    # Email
     MAIL_USERNAME: str = ""
     MAIL_PASSWORD: str = ""
     MAIL_FROM: str = "noreply@edupredict.com"
@@ -45,10 +46,10 @@ class Settings(BaseSettings):
     MAIL_TLS: bool = True
     MAIL_SSL: bool = False
     
-    # Redis (for Celery)
+    # Redis
     REDIS_URL: str = "redis://localhost:6379"
     
-    # ML Model paths
+    # ML Models
     DROPOUT_MODEL_PATH: str = "app/ml/models/dropout_model.joblib"
     GRADE_MODEL_PATH: str = "app/ml/models/grade_model.joblib"
     
@@ -60,23 +61,20 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 
-# Create settings instance
+# Instance
 settings = Settings()
 
 
 # Database URLs
 def get_mongodb_url() -> str:
-    """Get MongoDB connection URL"""
     return settings.MONGODB_URL
 
 
 def get_hdfs_url() -> str:
-    """Get HDFS connection URL"""
     return f"hdfs://{settings.HDFS_HOST}:{settings.HDFS_PORT}"
 
 
 def get_impala_connection_params() -> dict:
-    """Get Impala connection parameters"""
     return {
         "host": settings.IMPALA_HOST,
         "port": settings.IMPALA_PORT,

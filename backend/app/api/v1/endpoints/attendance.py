@@ -1,41 +1,58 @@
 """
-Attendance management endpoints for EduPredict
+Attendance management endpoints for EduPredict (DI based clean version)
 """
 
 from typing import List, Optional
 from datetime import date
-from fastapi import APIRouter, HTTPException, status, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query
 from app.models.user import TokenData
-from app.models.attendance import Attendance, AttendanceCreate, AttendanceUpdate, AttendanceBulkCreate, AttendanceStats
+from app.models.attendance import (
+    Attendance,
+    AttendanceCreate,
+    AttendanceUpdate,
+    AttendanceBulkCreate,
+    AttendanceStats,
+)
 from app.core.security import get_current_user
 from app.services.attendance_service import AttendanceService
-import logging
+from app.services.user_service import UserService
+from app.services.course_service import CourseService
+from app.core.database import get_database
 
-logger = logging.getLogger(__name__)
 router = APIRouter()
-attendance_service = AttendanceService()
+
+
+# Dependency provider
+def get_attendance_service(
+    db=Depends(get_database),
+    user_service: UserService = Depends(lambda db=Depends(get_database): UserService(db)),
+    course_service: CourseService = Depends(lambda db=Depends(get_database): CourseService(db)),
+):
+    return AttendanceService(db, user_service, course_service)
 
 
 @router.post("/", response_model=Attendance)
 async def create_attendance_record(
     attendance_data: AttendanceCreate,
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    service: AttendanceService = Depends(get_attendance_service),
 ):
     """Create a new attendance record"""
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(status_code=403, detail="Teacher or Admin role required.")
-    return await attendance_service.create_attendance(attendance_data, current_user.sub)
+    return await service.create_attendance(attendance_data, current_user.sub)
 
 
 @router.post("/bulk", response_model=List[Attendance])
 async def create_bulk_attendance(
     bulk_data: AttendanceBulkCreate,
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    service: AttendanceService = Depends(get_attendance_service),
 ):
     """Create multiple attendance records at once"""
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(status_code=403, detail="Teacher or Admin role required.")
-    return await attendance_service.create_bulk_attendance(bulk_data, current_user.sub)
+    return await service.create_bulk_attendance(bulk_data, current_user.sub)
 
 
 @router.get("/", response_model=List[Attendance])
@@ -46,11 +63,12 @@ async def get_attendance(
     course_id: Optional[str] = Query(None),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    service: AttendanceService = Depends(get_attendance_service),
 ):
     """Get attendance records with filters"""
     student_filter = current_user.sub if current_user.role == "student" else student_id
-    return await attendance_service.get_attendance_records(
+    return await service.get_attendance_records(
         skip=skip,
         limit=limit,
         student_id=student_filter,
@@ -58,7 +76,7 @@ async def get_attendance(
         date_from=date_from,
         date_to=date_to,
         user_role=current_user.role,
-        user_id=current_user.sub
+        user_id=current_user.sub,
     )
 
 
@@ -68,16 +86,14 @@ async def get_student_attendance_stats(
     course_id: Optional[str] = Query(None),
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    service: AttendanceService = Depends(get_attendance_service),
 ):
     """Get attendance statistics for a student"""
     if current_user.role == "student" and current_user.sub != student_id:
         raise HTTPException(status_code=403, detail="Access denied")
-    return await attendance_service.get_student_attendance_stats(
-        student_id=student_id,
-        course_id=course_id,
-        date_from=date_from,
-        date_to=date_to
+    return await service.get_student_attendance_stats(
+        student_id=student_id, course_id=course_id, date_from=date_from, date_to=date_to
     )
 
 
@@ -86,15 +102,14 @@ async def get_course_attendance_summary(
     course_id: str,
     date_from: Optional[date] = Query(None),
     date_to: Optional[date] = Query(None),
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    service: AttendanceService = Depends(get_attendance_service),
 ):
     """Get attendance summary for a course"""
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(status_code=403, detail="Teacher or Admin role required.")
-    return await attendance_service.get_course_attendance_summary(
-        course_id=course_id,
-        date_from=date_from,
-        date_to=date_to
+    return await service.get_course_attendance_summary(
+        course_id=course_id, date_from=date_from, date_to=date_to
     )
 
 
@@ -102,23 +117,25 @@ async def get_course_attendance_summary(
 async def update_attendance_record(
     attendance_id: str,
     update_data: AttendanceUpdate,
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    service: AttendanceService = Depends(get_attendance_service),
 ):
     """Update an attendance record"""
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(status_code=403, detail="Teacher or Admin role required.")
-    return await attendance_service.update_attendance(attendance_id, update_data)
+    return await service.update_attendance(attendance_id, update_data)
 
 
 @router.delete("/{attendance_id}", response_model=dict)
 async def delete_attendance_record(
     attendance_id: str,
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    service: AttendanceService = Depends(get_attendance_service),
 ):
     """Delete an attendance record"""
     if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(status_code=403, detail="Teacher or Admin role required.")
-    deleted = await attendance_service.delete_attendance(attendance_id)
+    deleted = await service.delete_attendance(attendance_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Attendance record not found")
     return {"success": True, "deleted_id": attendance_id}

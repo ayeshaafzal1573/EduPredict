@@ -1,3 +1,4 @@
+from bson import ObjectId
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from typing import List, Optional
 import logging
@@ -6,10 +7,15 @@ from app.models.user import TokenData, UserRole
 from app.models.course import Course, CourseCreate, CourseUpdate
 from app.services.course_service import CourseService
 from app.core.security import get_current_user
+from app.core.database import get_database
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-course_service = CourseService()
+
+
+# ---- Dependency Provider ----
+def get_course_service(db=Depends(get_database)):
+    return CourseService(db)
 
 
 def teacher_or_admin_required(user: TokenData):
@@ -23,10 +29,14 @@ def admin_required(user: TokenData):
 
 
 @router.post("/", response_model=Course)
-async def create_course(course_data: CourseCreate, current_user: TokenData = Depends(get_current_user)):
+async def create_course(
+    course_data: CourseCreate,
+    current_user: TokenData = Depends(get_current_user),
+    service: CourseService = Depends(get_course_service),
+):
     teacher_or_admin_required(current_user)
     try:
-        return await course_service.create_course(course_data, current_user.sub)
+        return await service.create_course(course_data, current_user.sub)
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as e:
@@ -39,24 +49,29 @@ async def get_courses(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=100),
     teacher_id: Optional[str] = None,
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    service: CourseService = Depends(get_course_service),
 ):
     try:
         if current_user.role == UserRole.STUDENT:
-            return await course_service.get_student_courses(current_user.sub, skip, limit)
+            return await service.get_student_courses(current_user.sub, skip, limit)
         elif current_user.role == UserRole.TEACHER:
-            return await course_service.get_courses(skip, limit, teacher_id or current_user.sub)
+            return await service.get_courses(skip, limit, teacher_id or current_user.sub)
         else:  # admin
-            return await course_service.get_courses(skip, limit, teacher_id)
+            return await service.get_courses(skip, limit, teacher_id)
     except Exception as e:
         logger.error(f"Error fetching courses: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve courses")
 
 
 @router.get("/{course_id}", response_model=Course)
-async def get_course(course_id: str, current_user: TokenData = Depends(get_current_user)):
+async def get_course(
+    course_id: str,
+    current_user: TokenData = Depends(get_current_user),
+    service: CourseService = Depends(get_course_service),
+):
     try:
-        course = await course_service.get_course_by_id(course_id)
+        course = await service.get_course_by_id(course_id)
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
 
@@ -73,10 +88,15 @@ async def get_course(course_id: str, current_user: TokenData = Depends(get_curre
 
 
 @router.put("/{course_id}", response_model=Course)
-async def update_course(course_id: str, course_update: CourseUpdate, current_user: TokenData = Depends(get_current_user)):
+async def update_course(
+    course_id: str,
+    course_update: CourseUpdate,
+    current_user: TokenData = Depends(get_current_user),
+    service: CourseService = Depends(get_course_service),
+):
     teacher_or_admin_required(current_user)
     try:
-        return await course_service.update_course(course_id, course_update)
+        return await service.update_course(course_id, course_update)
     except ValueError as ve:
         raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
@@ -85,10 +105,14 @@ async def update_course(course_id: str, course_update: CourseUpdate, current_use
 
 
 @router.delete("/{course_id}")
-async def delete_course(course_id: str, current_user: TokenData = Depends(get_current_user)):
+async def delete_course(
+    course_id: str,
+    current_user: TokenData = Depends(get_current_user),
+    service: CourseService = Depends(get_course_service),
+):
     admin_required(current_user)
     try:
-        success = await course_service.delete_course(course_id)
+        success = await service.delete_course(course_id)
         if not success:
             raise HTTPException(status_code=404, detail="Course not found")
         return {"message": "Course deleted successfully"}
@@ -98,10 +122,15 @@ async def delete_course(course_id: str, current_user: TokenData = Depends(get_cu
 
 
 @router.post("/{course_id}/enroll/{student_id}")
-async def enroll_student(course_id: str, student_id: str, current_user: TokenData = Depends(get_current_user)):
+async def enroll_student(
+    course_id: str,
+    student_id: str,
+    current_user: TokenData = Depends(get_current_user),
+    service: CourseService = Depends(get_course_service),
+):
     teacher_or_admin_required(current_user)
     try:
-        success = await course_service.enroll_student(course_id, student_id)
+        success = await service.enroll_student(course_id, student_id)
         if not success:
             raise HTTPException(status_code=400, detail="Failed to enroll student")
         return {"message": "Student enrolled successfully"}
@@ -111,10 +140,15 @@ async def enroll_student(course_id: str, student_id: str, current_user: TokenDat
 
 
 @router.delete("/{course_id}/enroll/{student_id}")
-async def unenroll_student(course_id: str, student_id: str, current_user: TokenData = Depends(get_current_user)):
+async def unenroll_student(
+    course_id: str,
+    student_id: str,
+    current_user: TokenData = Depends(get_current_user),
+    service: CourseService = Depends(get_course_service),
+):
     teacher_or_admin_required(current_user)
     try:
-        success = await course_service.unenroll_student(course_id, student_id)
+        success = await service.unenroll_student(course_id, student_id)
         if not success:
             raise HTTPException(status_code=400, detail="Failed to unenroll student")
         return {"message": "Student unenrolled successfully"}
@@ -124,10 +158,17 @@ async def unenroll_student(course_id: str, student_id: str, current_user: TokenD
 
 
 @router.get("/{course_id}/students")
-async def get_course_students(course_id: str, current_user: TokenData = Depends(get_current_user)):
+async def get_course_students(
+    course_id: str,
+    current_user: TokenData = Depends(get_current_user),
+    service: CourseService = Depends(get_course_service),
+):
     teacher_or_admin_required(current_user)
     try:
-        return await course_service.get_course_students(course_id)
+        students = await service.get_course_students(course_id)
+        return students
+    except ValueError as ve:
+        raise HTTPException(status_code=404, detail=str(ve))
     except Exception as e:
         logger.error(f"Error fetching students for course {course_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to retrieve course students")

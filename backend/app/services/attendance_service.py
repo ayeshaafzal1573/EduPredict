@@ -15,10 +15,11 @@ logger = logging.getLogger(__name__)
 
 
 class AttendanceService:
-    def __init__(self):
-        self.db = get_database()
-        self.user_service = UserService()
-        self.course_service = CourseService()
+    def __init__(self, db, user_service, course_service):
+        self.db = db
+        self.user_service = user_service
+        self.course_service = course_service
+
 
     def _get_collection(self):
         return self.db.get_collection("attendance")

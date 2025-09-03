@@ -2,44 +2,44 @@
 Grade management endpoints for EduPredict
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Optional
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from app.models.user import TokenData
-from app.models.grade import Grade, GradeCreate, GradeUpdate, GradeBulkCreate, GradeStats, CourseGradebook
+from app.models.grade import Grade, GradeCreate, GradeUpdate, GradeStats
 from app.core.security import get_current_user
 from app.services.grade_service import GradeService
+from app.services.user_service import UserService
+from app.services.course_service import CourseService
+from app.core.database import get_database
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-grade_service = GradeService()
+
+# ✅ Dependency injector
+def get_grade_service(
+    db=Depends(get_database),
+    user_service: UserService = Depends(lambda: UserService()),
+    course_service: CourseService = Depends(lambda: CourseService())
+):
+    return GradeService(db, user_service, course_service)
+
 
 @router.post("/", response_model=Grade)
 async def create_grade(
     grade_data: GradeCreate,
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    grade_service: GradeService = Depends(get_grade_service)
 ) -> Grade:
     """Create a new grade record"""
-    try:
-        # Only teachers and admins can create grades
-        if current_user.role not in ["teacher", "admin"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied. Teacher or Admin role required."
-            )
-
-        logger.info(f"Creating grade for student: {grade_data.student_id}")
-        grade = await grade_service.create_grade(grade_data, current_user.sub)
-        return grade
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to create grade: {str(e)}")
+    if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create grade record"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Teacher or Admin role required."
         )
+    return await grade_service.create_grade(grade_data, current_user.sub)
+
 
 @router.get("/", response_model=List[Grade])
 async def get_grades(
@@ -48,142 +48,87 @@ async def get_grades(
     student_id: Optional[str] = Query(None),
     course_id: Optional[str] = Query(None),
     grade_type: Optional[str] = Query(None),
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    grade_service: GradeService = Depends(get_grade_service)
 ) -> List[Grade]:
     """Get grade records with filtering"""
-    try:
-        logger.info(f"Getting grades for user: {current_user.sub}")
+    student_filter = current_user.sub if current_user.role == "student" else student_id
+    return await grade_service.get_grades(
+        skip=skip,
+        limit=limit,
+        student_id=student_filter,
+        course_id=course_id,
+        grade_type=grade_type,
+        user_role=current_user.role,
+        user_id=current_user.sub
+    )
 
-        # Students can only see their own grades
-        if current_user.role == "student":
-            student_filter = current_user.sub
-        else:
-            student_filter = student_id
 
-        grades = await grade_service.get_grades(
-            skip=skip,
-            limit=limit,
-            student_id=student_filter,
-            course_id=course_id,
-            grade_type=grade_type,
-            user_role=current_user.role,
-            user_id=current_user.sub
-        )
-
-        return grades
-    except Exception as e:
-        logger.error(f"Failed to get grades: {str(e)}")
-        # Return empty list instead of raising error - service should handle mock data
-        return []
-
-@router.get("/student/{student_id}/stats")
+@router.get("/student/{student_id}/stats", response_model=GradeStats)
 async def get_student_grade_stats(
     student_id: str,
     course_id: Optional[str] = Query(None),
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    grade_service: GradeService = Depends(get_grade_service)
 ):
     """Get grade statistics for a student"""
-    try:
-        # Students can only see their own stats
-        if current_user.role == "student" and current_user.sub != student_id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied"
-            )
-
-        stats = await grade_service.get_student_grade_stats(
-            student_id=student_id,
-            course_id=course_id
-        )
-
-        return stats.model_dump()
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get grade stats: {str(e)}")
+    if current_user.role == "student" and current_user.sub != student_id:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve grade statistics"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
         )
+    return await grade_service.get_student_grade_stats(student_id=student_id, course_id=course_id)
+
 
 @router.get("/course/{course_id}/gradebook")
 async def get_course_gradebook(
     course_id: str,
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    grade_service: GradeService = Depends(get_grade_service)
 ):
     """Get complete gradebook for a course"""
-    try:
-        # Only teachers and admins can access gradebooks
-        if current_user.role not in ["teacher", "admin"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied. Teacher or Admin role required."
-            )
-
-        gradebook = await grade_service.get_course_gradebook(course_id)
-        return gradebook
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to get course gradebook: {str(e)}")
+    if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to retrieve course gradebook"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Teacher or Admin role required."
         )
+    return await grade_service.get_course_gradebook(course_id)
+
 
 @router.put("/{grade_id}", response_model=Grade)
 async def update_grade(
     grade_id: str,
     grade_update: GradeUpdate,
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    grade_service: GradeService = Depends(get_grade_service)
 ) -> Grade:
     """Update a grade record"""
-    try:
-        # Only teachers and admins can update grades
-        if current_user.role not in ["teacher", "admin"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied. Teacher or Admin role required."
-            )
-
-        updated_grade = await grade_service.update_grade(grade_id, grade_update)
-        return updated_grade
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to update grade: {str(e)}")
+    if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update grade record"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Teacher or Admin role required."
         )
+    return await grade_service.update_grade(grade_id, grade_update)
+
 
 @router.delete("/{grade_id}")
 async def delete_grade(
     grade_id: str,
-    current_user: TokenData = Depends(get_current_user)
+    current_user: TokenData = Depends(get_current_user),
+    grade_service: GradeService = Depends(get_grade_service)
 ):
     """Delete a grade record"""
-    try:
-        # Only teachers and admins can delete grades
-        if current_user.role not in ["teacher", "admin"]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Access denied. Teacher or Admin role required."
-            )
-
-        success = await grade_service.delete_grade(grade_id)
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Grade record not found"
-            )
-
-        return {"message": "Grade deleted successfully"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to delete grade: {str(e)}")
+    if current_user.role not in ["teacher", "admin"]:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete grade record"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied. Teacher or Admin role required."
         )
+
+    success = await grade_service.delete_grade(grade_id)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Grade record not found"
+        )
+
+    return {"message": "Grade deleted successfully"}

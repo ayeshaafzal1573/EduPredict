@@ -86,7 +86,17 @@ export const coursesAPI = {
   createCourse: async (data) => (await apiClient.post('/courses', data)).data,
   updateCourse: async (id, data) => (await apiClient.put(`/courses/${id}`, data)).data,
   deleteCourse: async (id) => (await apiClient.delete(`/courses/${id}`)).data,
+
+  // --- Enrollment Endpoints ---
+  enrollStudent: async (courseId, studentId) =>
+    (await apiClient.post(`/courses/${courseId}/enroll/${studentId}`)).data,
+  unenrollStudent: async (courseId, studentId) =>
+    (await apiClient.delete(`/courses/${courseId}/enroll/${studentId}`)).data,
+
+  getCourseStudents: async (courseId) =>
+    (await apiClient.get(`/courses/${courseId}/students`)).data,
 };
+
 
 // -------------------- ATTENDANCE API --------------------
 export const attendanceAPI = {
@@ -106,12 +116,77 @@ export const gradesAPI = {
 
 // -------------------- ANALYTICS API --------------------
 export const analyticsAPI = {
-  getDropoutPrediction: async (studentId) => (await apiClient.get(`/analytics/dropout-prediction/${studentId}`)).data,
-  getGradePrediction: async (studentId, courseId) => (await apiClient.get(`/analytics/grade-prediction/${studentId}/${courseId}`)).data,
-  getPerformanceTrends: async (params = {}) => (await apiClient.get('/analytics/performance-trends', { params })).data,
-  getDashboardStats: async (role) => (await apiClient.get(`/analytics/dashboard-stats/${role}`)).data,
-  getClassAnalytics: async (classId) => (await apiClient.get(`/analytics/class/${classId}`)).data,
+  getDropoutPrediction: async (studentId) => {
+    try {
+      const response = await apiClient.get(`/analytics/dropout-prediction/${studentId}`);
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching dropout prediction:', err);
+      return { student_id: studentId, dropout_risk: 'unknown', probability: 0.0 };
+    }
+  },
+
+  getGradePrediction: async (studentId) => {
+    try {
+      const response = await apiClient.get(`/analytics/grade-predictions/${studentId}`);
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching grade predictions:', err);
+      return { student_id: studentId, predictions: [], message: 'Fallback - no predictions available' };
+    }
+  },
+
+  getPerformanceTrends: async (studentId) => {
+    try {
+      const response = await apiClient.get(`/analytics/performance-trends/${studentId}`);
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching performance trends:', err);
+      return { student_id: studentId, trends: [], message: 'Fallback - no trends available' };
+    }
+  },
+
+  getDashboardStats: async (role) => {
+    try {
+      const response = await apiClient.get(`/analytics/dashboard-stats/${role}`);
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      return {}; // fallback empty object
+    }
+  },
+
+  getClassAnalytics: async (classId) => {
+    try {
+      const response = await apiClient.get(`/analytics/class-analytics/${classId}`);
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching class analytics:', err);
+      return { class_id: classId, analytics: {}, message: 'Fallback - no class analytics available' };
+    }
+  },
+
+  getInstitutionAnalytics: async () => {
+    try {
+      const response = await apiClient.get('/analytics/institution-analytics');
+      return response.data;
+    } catch (err) {
+      console.error('Error fetching institution analytics:', err);
+      return {}; // fallback empty object
+    }
+  },
+
+  getAtRiskStudents: async (limit = 20) => {
+    try {
+      const response = await apiClient.get('/analytics/at-risk-students', { params: { limit } });
+      return response.data || []; // ensure always returns an array
+    } catch (err) {
+      console.error('Error fetching at-risk students:', err);
+      return []; // fallback empty array
+    }
+  },
 };
+
 
 // -------------------- NOTIFICATIONS API --------------------
 export const notificationsAPI = {

@@ -19,7 +19,7 @@ const Layout = () => {
         return [
           ...baseItems,
           { name: 'Attendance', href: '/attendance', icon: '📅' },
-          { name: 'Courses', href: '/courses', icon: '📚' },
+          { name: 'Courses', href: '/student-courses', icon: '📚' },
           { name: 'Grades', href: '/grades', icon: '✏️' },
           { name: 'Analytics', href: '/analytics', icon: '📊' },
           { name: 'Notifications', href: '/notifications', icon: '🔔' },
@@ -27,8 +27,9 @@ const Layout = () => {
       case 'teacher':
         return [
           ...baseItems,
-          { name: 'Attendance', href: '/attendance', icon: '📋' },
-          { name: 'Courses', href: '/courses', icon: '📚' },
+          { name: 'Attendance', href: '/teacher-attendance', icon: '📋' },
+
+          { name: 'Classes', href: '/classes', icon: '📚' },
           { name: 'Grades', href: '/grades', icon: '✏️' },
           { name: 'Analytics', href: '/analytics', icon: '📈' },
           { name: 'Notifications', href: '/notifications', icon: '🔔' },
@@ -72,8 +73,8 @@ const Layout = () => {
                 key={item.name}
                 to={item.href}
                 className={`flex items-center px-4 py-3 text-sm font-medium rounded-xl transition-all duration-200 ${location.pathname === item.href
-                    ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                    : 'text-gray-700 hover:bg-white/60 hover:text-gray-900'
+                  ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
+                  : 'text-gray-700 hover:bg-white/60 hover:text-gray-900'
                   }`}
               >
                 <span className="mr-3 text-lg">{item.icon}</span>

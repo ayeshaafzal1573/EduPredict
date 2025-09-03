@@ -23,9 +23,9 @@ class StudentNotFoundError(StudentServiceError):
 
 
 class StudentService:
-    def __init__(self):
-        self.db = get_database()
-        self.user_service = UserService()
+    def __init__(self, db, user_service: UserService):
+        self.db = db
+        self.user_service = user_service
         self.collection_name = "students"
 
     def _get_collection(self):
