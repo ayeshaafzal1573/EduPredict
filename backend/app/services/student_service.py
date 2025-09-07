@@ -11,6 +11,7 @@ from app.models.student import Student, StudentCreate, StudentUpdate, StudentAna
 from loguru import logger
 from typing import Optional
 from datetime import datetime
+import json
 
 class StudentService:
     """Service for student-related operations"""
@@ -123,15 +124,23 @@ class StudentService:
             # Placeholder ML logic
             analytics_data = {
                 "student_id": student_id,
-                "performance_score": 85.0,  # Example
-                "dropout_risk": 0.1,       # Example
+                "performance_trend": [{"semester": "Fall 2023", "gpa": 3.2}],
+                "attendance_trend": [{"month": "Jan", "rate": 85}],
+                "grade_distribution": {"A": 2, "B": 3, "C": 1},
+                "risk_assessment": {"score": 0.1, "level": "low"},
+                "predictions": {"dropout_risk": 0.1},
                 "hdfs_path": f"/edupredict/analytics/{student_id}.json"
             }
             # Save to HDFS
-            self.hdfs_client.save_data(
-                data=json.dumps(analytics_data).encode(),
-                hdfs_path=analytics_data["hdfs_path"]
-            )
+            try:
+                self.hdfs_client.save_data(
+                    data=json.dumps(analytics_data).encode(),
+                    hdfs_path=analytics_data["hdfs_path"]
+                )
+            except Exception as hdfs_error:
+                logger.warning(f"HDFS save failed: {hdfs_error}")
+                analytics_data["hdfs_path"] = None
+                
             return StudentAnalytics(**analytics_data)
         except HTTPException as e:
             raise e

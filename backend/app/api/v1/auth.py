@@ -6,12 +6,9 @@ from app.models.user import User, UserCreate, UserInDB, Token, LoginRequest, Pas
 from motor.motor_asyncio import AsyncIOMotorCollection
 from loguru import logger
 from datetime import timedelta
+import json
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
-
-async def get_users_collection() -> AsyncIOMotorCollection:
-    """Dependency for users collection"""
-    return get_users_collection()
 
 @router.post("/register", response_model=User, dependencies=[Depends(require_roles([UserRole.ADMIN]))])
 async def register_user(user: UserCreate, collection: AsyncIOMotorCollection = Depends(get_users_collection)):
@@ -36,9 +33,22 @@ async def register_user(user: UserCreate, collection: AsyncIOMotorCollection = D
         user_dict = user.dict()
         user_dict["hashed_password"] = hashed_password
         del user_dict["password"]
+        user_dict["created_at"] = datetime.utcnow()
+        user_dict["updated_at"] = datetime.utcnow()
         result = await collection.insert_one(user_dict)
         user_in_db = await collection.find_one({"_id": result.inserted_id})
-        return User(**user_in_db)
+        user_response = User(
+            id=str(user_in_db["_id"]),
+            email=user_in_db["email"],
+            first_name=user_in_db["first_name"],
+            last_name=user_in_db["last_name"],
+            role=user_in_db["role"],
+            is_active=user_in_db.get("is_active", True),
+            created_at=user_in_db["created_at"],
+            updated_at=user_in_db["updated_at"],
+            last_login=user_in_db.get("last_login")
+        )
+        return user_response
     except HTTPException as e:
         raise e
     except Exception as e:
@@ -64,6 +74,13 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), collection: As
         user = await collection.find_one({"email": form_data.username})
         if not user or not verify_password(form_data.password, user["hashed_password"]):
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+        
+        # Update last login
+        await collection.update_one(
+            {"_id": user["_id"]},
+            {"$set": {"last_login": datetime.utcnow()}}
+        )
+        
         access_token = create_access_token(
             data={"sub": str(user["_id"]), "email": user["email"], "role": user["role"]},
             expires_delta=timedelta(minutes=60)
@@ -73,6 +90,44 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), collection: As
         raise e
     except Exception as e:
         logger.error(f"Failed to login user {form_data.username}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+@router.get("/me", response_model=User)
+async def get_current_user_info(current_user: TokenData = Depends(get_current_user), collection: AsyncIOMotorCollection = Depends(get_users_collection)):
+    """
+    Get current user information
+    
+    Args:
+        current_user: Current authenticated user
+        collection: Users collection dependency
+    
+    Returns:
+        Current user data
+    
+    Raises:
+        HTTPException: If user not found
+    """
+    try:
+        from bson import ObjectId
+        user = await collection.find_one({"_id": ObjectId(current_user.user_id)})
+        if not user:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+        
+        return User(
+            id=str(user["_id"]),
+            email=user["email"],
+            first_name=user["first_name"],
+            last_name=user["last_name"],
+            role=user["role"],
+            is_active=user.get("is_active", True),
+            created_at=user["created_at"],
+            updated_at=user["updated_at"],
+            last_login=user.get("last_login")
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logger.error(f"Failed to get current user: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.post("/password-reset", response_model=dict)

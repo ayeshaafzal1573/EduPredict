@@ -12,17 +12,19 @@ from app.api.v1.api import api_router
 async def lifespan(app: FastAPI):
     """Handle startup & shutdown events"""
     try:
-        if await connect_to_mongo():
+        connected = await connect_to_mongo()
+        if connected:
             logger.info("✅ MongoDB connected successfully")
         else:
-            logger.error("❌ Failed to connect to MongoDB")
-            raise RuntimeError("MongoDB connection failed")
+            logger.warning("⚠️ MongoDB connection failed, running in fallback mode")
         yield
-        await close_mongo_connection()
-        logger.info("✅ MongoDB connection closed")
+        if client:
+            await close_mongo_connection()
+            logger.info("✅ MongoDB connection closed")
     except Exception as e:
         logger.error(f"Lifespan error: {e}")
-        raise
+        # Don't raise to prevent startup failure
+        yield
 
 
 app = FastAPI(

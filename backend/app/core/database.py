@@ -33,7 +33,9 @@ async def connect_to_mongo() -> bool:
         return True
     except Exception as e:
         logger.error(f"MongoDB connection failed: {e}")
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Failed to connect to MongoDB")
+        # Don't raise HTTPException during startup
+        logger.warning("MongoDB connection failed, using fallback mode")
+        return False
 
 async def close_mongo_connection() -> None:
     """

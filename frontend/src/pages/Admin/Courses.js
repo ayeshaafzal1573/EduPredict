@@ -151,9 +151,10 @@ const AdminCourses = () => {
       const students = await coursesAPI.getCourseStudents(course._id);
       setEnrolledStudents(students);
 
-      const allUsers = await usersAPI.getUsers({ role: 'student' });
-      setAllStudents(allUsers);
+      const allStudentUsers = await usersAPI.getUsers({ role: 'student' });
+      setAllStudents(allStudentUsers);
     } catch (err) {
+      console.error('Error loading students:', err);
       toast.error('Failed to load students');
     }
     setShowEnrollModal(true);
@@ -166,7 +167,9 @@ const AdminCourses = () => {
       toast.success('Student enrolled successfully');
       const students = await coursesAPI.getCourseStudents(selectedEnrollCourse._id);
       setEnrolledStudents(students);
+      setSelectedStudentId('');
     } catch (err) {
+      console.error('Error enrolling student:', err);
       toast.error('Failed to enroll student');
     }
   };
@@ -178,6 +181,7 @@ const AdminCourses = () => {
       const students = await coursesAPI.getCourseStudents(selectedEnrollCourse._id);
       setEnrolledStudents(students);
     } catch (err) {
+      console.error('Error unenrolling student:', err);
       toast.error('Failed to unenroll student');
     }
   };

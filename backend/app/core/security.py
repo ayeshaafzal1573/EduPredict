@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from app.core.config import settings
 from app.models.user import UserRole, TokenData
 from loguru import logger
+from bson import ObjectId
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -78,6 +79,9 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenData:
     except JWTError as e:
         logger.error(f"JWT decode error: {e}")
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
+    except Exception as e:
+        logger.error(f"Token validation error: {e}")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")
 
 def require_roles(roles: list[UserRole]):
     """
@@ -94,3 +98,7 @@ def require_roles(roles: list[UserRole]):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Insufficient permissions")
         return current_user
     return role_checker
+
+def require_admin():
+    """Dependency to require admin role"""
+    return require_roles([UserRole.ADMIN])
