@@ -1,12 +1,9 @@
-"""
-User models and schemas for EduPredict
-"""
-
-from pydantic import BaseModel, EmailStr, Field
-from typing import Optional, List
+from pydantic import BaseModel, EmailStr, Field, validator
+from typing import Optional
 from datetime import datetime
 from enum import Enum
 from bson import ObjectId
+from app.models.base import PyObjectId, MongoBaseModel
 
 
 class UserRole(str, Enum):
@@ -17,29 +14,7 @@ class UserRole(str, Enum):
     ANALYST = "analyst"
 
 
-class PyObjectId(ObjectId):
-    """Custom ObjectId type for Pydantic v2"""
-
-    @classmethod
-    def __get_pydantic_core_schema__(cls, source_type, handler):
-        from pydantic_core import core_schema
-        return core_schema.no_info_plain_validator_function(cls.validate)
-
-    @classmethod
-    def validate(cls, v):
-        if isinstance(v, ObjectId):
-            return v
-        if isinstance(v, str) and ObjectId.is_valid(v):
-            return ObjectId(v)
-        raise ValueError("Invalid ObjectId")
-
-    @classmethod
-    def __get_pydantic_json_schema__(cls, field_schema, handler):
-        field_schema.update(type="string")
-        return field_schema
-
-
-class UserBase(BaseModel):
+class UserBase(MongoBaseModel):
     """Base user model"""
     email: EmailStr
     first_name: str = Field(..., min_length=1, max_length=50)
@@ -51,6 +26,13 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """User creation model"""
     password: str = Field(..., min_length=8, max_length=100)
+
+    @validator("password")
+    def validate_password(cls, v):
+        """Ensure password meets complexity requirements"""
+        if not any(c.isupper() for c in v) or not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one uppercase letter and one digit")
+        return v
 
 
 class UserUpdate(BaseModel):
@@ -69,12 +51,6 @@ class UserInDB(UserBase):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     last_login: Optional[datetime] = None
-    
-    model_config = {
-        "populate_by_name": True,
-        "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str}
-    }
 
 
 class User(UserBase):
@@ -96,7 +72,7 @@ class TokenData(BaseModel):
     user_id: Optional[str] = None
     email: Optional[str] = None
     role: Optional[UserRole] = None
-    sub: Optional[str] = None   # add this for compatibility
+    sub: Optional[str] = None
 
 
 class LoginRequest(BaseModel):
@@ -114,3 +90,10 @@ class PasswordResetConfirm(BaseModel):
     """Password reset confirmation model"""
     token: str
     new_password: str = Field(..., min_length=8, max_length=100)
+
+    @validator("new_password")
+    def validate_new_password(cls, v):
+        """Ensure new password meets complexity requirements"""
+        if not any(c.isupper() for c in v) or not any(c.isdigit() for c in v):
+            raise ValueError("New password must contain at least one uppercase letter and one digit")
+        return v

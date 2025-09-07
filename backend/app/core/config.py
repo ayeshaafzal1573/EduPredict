@@ -1,47 +1,33 @@
-"""
-Configuration settings for EduPredict application
-"""
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
-
+from pathlib import Path
 
 class Settings(BaseSettings):
-    """Application settings"""
+    """Application settings loaded from environment variables"""
     
-    # Application
+    MONGODB_URL: str = "mongodb://localhost:27017/edupredict"
+    MONGODB_DB: str = "edupredict"
+    HDFS_HOST: str = "localhost"
+    HDFS_PORT: int = 9000
+    HDFS_USER: str = "hdfs"
+    REDIS_URL: str = "redis://localhost:6379/0"
+    TABLEAU_SERVER: str = "http://localhost:8000"
+    TABLEAU_USERNAME: str = "admin"
+    TABLEAU_PASSWORD: str = "password"
+    TABLEAU_SITE_NAME: str = "default"
+    SECRET_KEY: str = "your-secure-secret-key-here"
+    CORS_ALLOWED_ORIGINS: List[str] = ["http://localhost:3000"]
+    ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1"]
     APP_NAME: str = "EduPredict"
-    DEBUG: bool = False
-    VERSION: str = "1.0.0"
-    
-    # Security
-    SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    
-    # CORS
-    CORS_ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
-    ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1", "0.0.0.0"]
-    
-    # MongoDB
-    MONGODB_URL: str
-    MONGODB_DB_NAME: str
-    
-    # ML Models
     DROPOUT_MODEL_PATH: str = "app/ml/models/dropout_model.joblib"
-    GRADE_MODEL_PATH: str = "app/ml/models/grade_model.joblib"
-    
-    # Logging
     LOG_LEVEL: str = "INFO"
+    
+    model_config = SettingsConfigDict(
+        env_file=Path(__file__).parent.parent.parent / ".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="allow"  # Allow extra fields for flexibility
+    )
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-
-
-# Instance
 settings = Settings()
-
-
-def get_mongodb_url() -> str:
-    return settings.MONGODB_URL

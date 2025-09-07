@@ -1,105 +1,87 @@
-import motor.motor_asyncio
-import asyncio
-from typing import Optional
-from motor.motor_asyncio import AsyncIOMotorDatabase
-
-try:
-    from loguru import logger
-except ImportError:
-    import logging
-    logger = logging.getLogger(__name__)
-
-from app.core.config import settings, get_mongodb_url
 
 
-class DatabaseManager:
-    """MongoDB connection manager"""
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
+from app.core.config import settings
+from loguru import logger
+from tenacity import retry, stop_after_attempt, wait_exponential
+from fastapi import HTTPException, status
 
-    def __init__(self):
-        self.mongodb_client: Optional[motor.motor_asyncio.AsyncIOMotorClient] = None
-        self.mongodb_db: Optional[AsyncIOMotorDatabase] = None
-        self._is_connected = False
+client: AsyncIOMotorClient | None = None
 
-    async def connect_mongodb(self):
-        """Connect to MongoDB"""
-        try:
-            self.mongodb_client = motor.motor_asyncio.AsyncIOMotorClient(get_mongodb_url())
-            self.mongodb_db = self.mongodb_client[settings.MONGODB_DB_NAME]
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+async def connect_to_mongo() -> bool:
+    """
+    Initialize MongoDB connection with retry logic
+    
+    Returns:
+        bool: True if connection successful
+    
+    Raises:
+        HTTPException: If connection fails after retries
+    """
+    global client
+    try:
+        client = AsyncIOMotorClient(
+            settings.MONGODB_URL,
+            maxPoolSize=100,
+            minPoolSize=10,
+            connectTimeoutMS=5000,
+            socketTimeoutMS=5000
+        )
+        await client.server_info()  # Test connection
+        logger.info("MongoDB connected successfully")
+        return True
+    except Exception as e:
+        logger.error(f"MongoDB connection failed: {e}")
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Failed to connect to MongoDB")
 
-            # Test connection with timeout
-            await asyncio.wait_for(
-                self.mongodb_client.admin.command('ping'),
-                timeout=5.0
-            )
-            self._is_connected = True
-            logger.info("✅ Connected to MongoDB successfully")
-            return True
-        except Exception as e:
-            logger.error(f"MongoDB connection failed: {e}")
-            self.mongodb_client = None
-            self.mongodb_db = None
-            self._is_connected = False
-            return False
+async def close_mongo_connection() -> None:
+    """
+    Close MongoDB connection
+    """
+    global client
+    if client:
+        client.close()
+        logger.info("MongoDB connection closed")
+        client = None
 
-    def get_collection(self, collection_name: str):
-        """Return MongoDB collection"""
-        if not self._is_connected or self.mongodb_db is None:
-            raise RuntimeError("MongoDB not connected")
-        return self.mongodb_db[collection_name]
+async def get_collection(collection_name: str) -> AsyncIOMotorCollection:
+    """
+    Get MongoDB collection with validation
+    
+    Args:
+        collection_name: Name of the collection
+    
+    Returns:
+        AsyncIOMotorCollection: MongoDB collection object
+    
+    Raises:
+        HTTPException: If client not initialized or collection invalid
+    """
+    if not client:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="MongoDB client not initialized")
+    return client[settings.MONGODB_DB][collection_name]
 
-    async def close_mongodb(self):
-        """Close MongoDB connection"""
-        if self.mongodb_client:
-            self.mongodb_client.close()
-            self._is_connected = False
-            logger.info("MongoDB connection closed")
+async def get_students_collection() -> AsyncIOMotorCollection:
+    """Get students collection"""
+    return await get_collection("students")
 
-    def is_connected(self) -> bool:
-        """Check if MongoDB is connected"""
-        return self._is_connected
+async def get_users_collection() -> AsyncIOMotorCollection:
+    """Get users collection"""
+    return await get_collection("users")
 
+async def get_courses_collection() -> AsyncIOMotorCollection:
+    """Get courses collection"""
+    return await get_collection("courses")
 
-# Global database manager instance
-db_manager = DatabaseManager()
+async def get_attendance_collection() -> AsyncIOMotorCollection:
+    """Get attendance collection"""
+    return await get_collection("attendance")
 
+async def get_grades_collection() -> AsyncIOMotorCollection:
+    """Get grades collection"""
+    return await get_collection("grades")
 
-async def connect_to_mongo():
-    """Initialize MongoDB connection"""
-    return await db_manager.connect_mongodb()
-
-
-async def close_mongo_connection():
-    """Close MongoDB connection"""
-    await db_manager.close_mongodb()
-
-
-def get_database():
-    """Get MongoDB database instance"""
-    if not db_manager.is_connected():
-        raise RuntimeError("MongoDB not connected")
-    return db_manager.mongodb_db
-
-
-# Collection getters
-def get_users_collection():
-    return db_manager.get_collection("users")
-
-
-def get_students_collection():
-    return db_manager.get_collection("students")
-
-
-def get_courses_collection():
-    return db_manager.get_collection("courses")
-
-
-def get_attendance_collection():
-    return db_manager.get_collection("attendance")
-
-
-def get_grades_collection():
-    return db_manager.get_collection("grades")
-
-
-def get_notifications_collection():
-    return db_manager.get_collection("notifications")
+async def get_notifications_collection() -> AsyncIOMotorCollection:
+    """Get notifications collection"""
+    return await get_collection("notifications")

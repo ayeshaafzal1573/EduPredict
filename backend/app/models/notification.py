@@ -1,25 +1,21 @@
 from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
-from bson import ObjectId
-from app.utils.pyobjectid import PyObjectId
+from app.models.base import PyObjectId, MongoBaseModel
 
-class Notification(BaseModel):
+
+class Notification(MongoBaseModel):
+    """Notification model"""
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
     user_id: str
-    title: str
-    message: str
+    title: str = Field(..., min_length=1, max_length=200)
+    message: str = Field(..., min_length=1, max_length=1000)
     is_read: bool = False
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-    model_config = {
-        "populate_by_name": True,
-        "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str}
-    }
-
 
 class NotificationCreate(BaseModel):
-    title: str
-    message: str
+    """Notification creation model"""
+    title: str = Field(..., min_length=1, max_length=200)
+    message: str = Field(..., min_length=1, max_length=1000)
     user_id: str

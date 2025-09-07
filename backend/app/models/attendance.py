@@ -1,12 +1,9 @@
-"""
-Attendance models for EduPredict
-"""
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime, date
 from enum import Enum
-from app.models.user import PyObjectId  # ✅ reuse instead of redefining
+from app.models.base import PyObjectId, MongoBaseModel
 
 
 class AttendanceStatus(str, Enum):
@@ -16,12 +13,27 @@ class AttendanceStatus(str, Enum):
     EXCUSED = "excused"
 
 
-class AttendanceBase(BaseModel):
+class AttendanceBase(MongoBaseModel):
+    """Base attendance model"""
     student_id: str
     course_id: str
     date: date
     status: AttendanceStatus
     notes: Optional[str] = Field(None, max_length=500)
+
+    @validator("student_id")
+    def validate_student_id(cls, v):
+        """Ensure student_id follows a specific format"""
+        if not v.startswith("STU-") or not v[4:].isdigit():
+            raise ValueError("student_id must start with 'STU-' followed by digits")
+        return v
+
+    @validator("course_id")
+    def validate_course_id(cls, v):
+        """Ensure course_id follows a specific format"""
+        if not v.replace("-", "").isalnum():
+            raise ValueError("Course ID must be alphanumeric with optional hyphens")
+        return v
 
 
 class AttendanceCreate(AttendanceBase):
@@ -36,21 +48,15 @@ class AttendanceUpdate(BaseModel):
 class AttendanceBulkCreate(BaseModel):
     course_id: str
     date: date
-    attendance_records: List[Dict[str, Any]]  # {student_id, status, notes?}
+    attendance_records: List[Dict[str, Any]]
 
 
 class Attendance(AttendanceBase):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    marked_by: str  # Teacher/Admin who marked attendance
+    marked_by: str
     marked_by_name: Optional[str] = None
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-    model_config = {
-        "populate_by_name": True,
-        "arbitrary_types_allowed": True,
-        "json_encoders": {PyObjectId: str}
-    }
 
 
 class AttendanceStats(BaseModel):
@@ -63,6 +69,7 @@ class AttendanceStats(BaseModel):
     attendance_rate: float
     period_start: date
     period_end: date
+    hdfs_path: Optional[str] = None  # Path to HDFS storage for attendance data
 
 
 class AttendanceSummary(BaseModel):

@@ -1,14 +1,9 @@
-"""
-Grade models for EduPredict
-"""
-
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from bson import ObjectId
 from enum import Enum
+from app.models.base import PyObjectId, MongoBaseModel
 
-from app.utils.pyobjectid import PyObjectId  # centralize this!
 
 class GradeType(str, Enum):
     ASSIGNMENT = "assignment"
@@ -20,20 +15,35 @@ class GradeType(str, Enum):
     FINAL = "final"
 
 
-class GradeBase(BaseModel):
+class GradeBase(MongoBaseModel):
+    """Base grade model"""
     student_id: str
     course_id: str
     assignment_name: str = Field(..., min_length=1, max_length=200)
     grade_type: GradeType
     points_earned: float = Field(..., ge=0)
     points_possible: float = Field(..., gt=0)
-    percentage: Optional[float] = None   # auto-calculated in service
-    letter_grade: Optional[str] = None   # A, B, C, etc.
-    grade_points: Optional[float] = None # 0.0 – 4.0
+    percentage: Optional[float] = None
+    letter_grade: Optional[str] = None
+    grade_points: Optional[float] = None
     weight: float = Field(1.0, ge=0, le=1.0)
     notes: Optional[str] = Field(None, max_length=1000)
     due_date: Optional[datetime] = None
     submitted_date: Optional[datetime] = None
+
+    @validator("student_id")
+    def validate_student_id(cls, v):
+        """Ensure student_id follows a specific format"""
+        if not v.startswith("STU-") or not v[4:].isdigit():
+            raise ValueError("student_id must start with 'STU-' followed by digits")
+        return v
+
+    @validator("course_id")
+    def validate_course_id(cls, v):
+        """Ensure course_id follows a specific format"""
+        if not v.replace("-", "").isalnum():
+            raise ValueError("Course ID must be alphanumeric with optional hyphens")
+        return v
 
 
 class GradeCreate(GradeBase):
@@ -61,7 +71,7 @@ class GradeBulkCreate(BaseModel):
     points_possible: float
     weight: float = 1.0
     due_date: Optional[datetime] = None
-    grades: List[Dict[str, Any]]  # {student_id, points_earned, notes?}
+    grades: List[Dict[str, Any]]
 
 
 class Grade(GradeBase):
@@ -73,12 +83,6 @@ class Grade(GradeBase):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
-    model_config = {
-        "populate_by_name": True,
-        "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str}
-    }
-
 
 class GradeStats(BaseModel):
     total_assignments: int
@@ -87,7 +91,8 @@ class GradeStats(BaseModel):
     average_grade_points: float
     current_letter_grade: str
     grade_distribution: Dict[str, int]
-    trend: str  # could replace with Enum later
+    trend: str
+    hdfs_path: Optional[str] = None  # Path to HDFS storage for grade data
 
 
 class CourseGradebook(BaseModel):
@@ -108,12 +113,15 @@ class TranscriptEntry(BaseModel):
     final_grade: str
     grade_points: float
     instructor: str
+
+
 class AssignmentSummary(BaseModel):
     name: str
     type: str
     points_possible: float
     weight: float = 1.0
     due_date: Optional[datetime] = None
+
 
 class StudentGradeSummary(BaseModel):
     student_id: str

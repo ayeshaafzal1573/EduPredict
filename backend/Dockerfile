@@ -8,6 +8,9 @@ WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
+ENV JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+ENV HADOOP_HOME=/opt/hadoop
+ENV PATH=$PATH:$HADOOP_HOME/bin
 
 # Install system dependencies
 RUN apt-get update \
@@ -18,7 +21,13 @@ RUN apt-get update \
         libssl-dev \
         curl \
         build-essential \
+        openjdk-11-jdk \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Hadoop
+RUN curl -sL https://archive.apache.org/dist/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz | tar xz -C /opt \
+    && mv /opt/hadoop-3.3.6 /opt/hadoop \
+    && chown -R root:root /opt/hadoop
 
 # Copy requirements first for better caching
 COPY requirements.txt .
@@ -31,7 +40,8 @@ RUN pip install --no-cache-dir --upgrade pip \
 COPY . .
 
 # Create directories for ML models
-RUN mkdir -p app/ml/models
+RUN mkdir -p app/ml/models \
+    && chown -R appuser:appuser app/ml/models
 
 # Create non-root user
 RUN adduser --disabled-password --gecos '' appuser \

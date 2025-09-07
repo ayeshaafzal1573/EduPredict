@@ -1,15 +1,13 @@
-"""
-Student models and schemas for EduPredict
-"""
 
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel, Field, validator
 from typing import Optional, List, Dict, Any
 from datetime import datetime, date
 from bson import ObjectId
-from app.models.user import PyObjectId
+from app.models.base import PyObjectId, MongoBaseModel
 
 
-class StudentProfile(BaseModel):
+class StudentProfile(MongoBaseModel):
     """Student profile information"""
     student_id: str = Field(..., description="Unique student identifier")
     user_id: PyObjectId = Field(..., description="Reference to user account")
@@ -26,12 +24,13 @@ class StudentProfile(BaseModel):
     program: str  # e.g., "Computer Science", "Engineering"
     gpa: Optional[float] = Field(None, ge=0.0, le=4.0)
     total_credits: int = Field(default=0, ge=0)
-    
-    model_config = {
-        "populate_by_name": True,
-        "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str}
-    }
+
+    @validator("student_id")
+    def validate_student_id(cls, v):
+        """Ensure student_id follows a specific format (e.g., STU-XXXX)"""
+        if not v.startswith("STU-") or not v[4:].isdigit():
+            raise ValueError("student_id must start with 'STU-' followed by digits")
+        return v
 
 
 class StudentCreate(BaseModel):
@@ -70,24 +69,9 @@ class StudentInDB(StudentProfile):
     is_active: bool = True
 
 
-class Student(BaseModel):
+class Student(StudentProfile):
     """Student response model"""
     id: str
-    student_id: str
-    user_id: str
-    date_of_birth: date
-    gender: str
-    phone: Optional[str]
-    address: Optional[str]
-    emergency_contact: Optional[Dict[str, str]]
-    enrollment_date: date
-    expected_graduation: date
-    current_semester: int
-    current_year: int
-    department: str
-    program: str
-    gpa: Optional[float]
-    total_credits: int
     created_at: datetime
     updated_at: datetime
     is_active: bool
@@ -107,6 +91,13 @@ class StudentPerformance(BaseModel):
     recommendations: List[str] = []
     last_updated: datetime = Field(default_factory=datetime.utcnow)
 
+    @validator("student_id")
+    def validate_student_id(cls, v):
+        """Ensure student_id follows a specific format"""
+        if not v.startswith("STU-") or not v[4:].isdigit():
+            raise ValueError("student_id must start with 'STU-' followed by digits")
+        return v
+
 
 class StudentAnalytics(BaseModel):
     """Student analytics data"""
@@ -117,3 +108,11 @@ class StudentAnalytics(BaseModel):
     risk_assessment: Dict[str, Any]          # Risk factors and scores
     predictions: Dict[str, Any]              # ML predictions
     generated_at: datetime = Field(default_factory=datetime.utcnow)
+    hdfs_path: Optional[str] = None  # Path to HDFS storage for large datasets
+
+    @validator("student_id")
+    def validate_student_id(cls, v):
+        """Ensure student_id follows a specific format"""
+        if not v.startswith("STU-") or not v[4:].isdigit():
+            raise ValueError("student_id must start with 'STU-' followed by digits")
+        return v
