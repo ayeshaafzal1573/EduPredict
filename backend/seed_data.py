@@ -10,7 +10,7 @@ import os
 from datetime import datetime, date, timedelta
 from motor.motor_asyncio import AsyncIOMotorClient
 from loguru import logger
-import pandas as pd
+from bson import ObjectId
 
 # Add the backend directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -65,37 +65,64 @@ async def create_sample_users():
     ]
     return users
 
-async def create_sample_students():
+async def create_sample_students(user_ids):
     """Create sample student profiles"""
-    students = []
-    
-    # Read from CSV if available
-    csv_path = "data/sample_data/students_sample.csv"
-    if os.path.exists(csv_path):
-        df = pd.read_csv(csv_path)
-        for _, row in df.iterrows():
-            student = {
-                "student_id": row["student_id"],
-                "user_id": None,  # Will be linked later
-                "date_of_birth": date(2002, 5, 15),
-                "gender": row["gender"],
-                "department": row["department"],
-                "program": row["program"],
-                "enrollment_date": date(2021, 9, 1),
-                "expected_graduation": date(2025, 5, 15),
-                "current_semester": row["current_semester"],
-                "current_year": row["current_year"],
-                "gpa": row["gpa"],
-                "total_credits": row["total_credits"],
-                "is_active": True,
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
-            }
-            students.append(student)
-    
+    students = [
+        {
+            "student_id": "STU001",
+            "user_id": user_ids.get("student@edupredict.com"),
+            "date_of_birth": date(2002, 5, 15),
+            "gender": "female",
+            "department": "Computer Science",
+            "program": "Bachelor of Science",
+            "enrollment_date": date(2021, 9, 1),
+            "expected_graduation": date(2025, 5, 15),
+            "current_semester": 5,
+            "current_year": 3,
+            "gpa": 3.2,
+            "total_credits": 75,
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "student_id": "STU002",
+            "user_id": ObjectId(),  # Placeholder user
+            "date_of_birth": date(2001, 8, 22),
+            "gender": "male",
+            "department": "Engineering",
+            "program": "Bachelor of Engineering",
+            "enrollment_date": date(2020, 9, 1),
+            "expected_graduation": date(2024, 5, 15),
+            "current_semester": 7,
+            "current_year": 4,
+            "gpa": 3.8,
+            "total_credits": 105,
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        },
+        {
+            "student_id": "STU003",
+            "user_id": ObjectId(),  # Placeholder user
+            "date_of_birth": date(2003, 1, 10),
+            "gender": "male",
+            "department": "Mathematics",
+            "program": "Bachelor of Science",
+            "enrollment_date": date(2022, 1, 15),
+            "expected_graduation": date(2026, 1, 15),
+            "current_semester": 3,
+            "current_year": 2,
+            "gpa": 2.1,
+            "total_credits": 45,
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow()
+        }
+    ]
     return students
 
-async def create_sample_courses():
+async def create_sample_courses(teacher_id):
     """Create sample courses"""
     courses = [
         {
@@ -109,9 +136,10 @@ async def create_sample_courses():
             "schedule": "MWF 10:00-11:00",
             "room": "CS-201",
             "max_students": 30,
-            "teacher_id": None,  # Will be linked later
-            "students": [],
-            "student_count": 0,
+            "teacher_id": teacher_id,
+            "teacher_name": "John Teacher",
+            "students": ["STU001", "STU002"],
+            "student_count": 2,
             "is_active": True,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
@@ -127,9 +155,10 @@ async def create_sample_courses():
             "schedule": "TTh 14:00-15:30",
             "room": "MATH-105",
             "max_students": 25,
-            "teacher_id": None,
-            "students": [],
-            "student_count": 0,
+            "teacher_id": teacher_id,
+            "teacher_name": "John Teacher",
+            "students": ["STU001", "STU003"],
+            "student_count": 2,
             "is_active": True,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
@@ -145,9 +174,10 @@ async def create_sample_courses():
             "schedule": "MWF 13:00-14:00",
             "room": "PHYS-301",
             "max_students": 20,
-            "teacher_id": None,
-            "students": [],
-            "student_count": 0,
+            "teacher_id": teacher_id,
+            "teacher_name": "John Teacher",
+            "students": ["STU001"],
+            "student_count": 1,
             "is_active": True,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
@@ -164,82 +194,84 @@ async def seed_database():
         
         logger.info("Starting database seeding...")
         
-        # Create users
+        # Create collections
         users_collection = db.users
-        users = await create_sample_users()
+        students_collection = db.students
+        courses_collection = db.courses
+        grades_collection = db.grades
+        attendance_collection = db.attendance
+        notifications_collection = db.notifications
         
         # Clear existing data
         await users_collection.delete_many({})
-        await db.students.delete_many({})
-        await db.courses.delete_many({})
-        await db.grades.delete_many({})
-        await db.attendance.delete_many({})
-        await db.notifications.delete_many({})
+        await students_collection.delete_many({})
+        await courses_collection.delete_many({})
+        await grades_collection.delete_many({})
+        await attendance_collection.delete_many({})
+        await notifications_collection.delete_many({})
         
-        # Insert users
+        # Create users
+        users = await create_sample_users()
         user_result = await users_collection.insert_many(users)
         logger.info(f"Created {len(user_result.inserted_ids)} users")
         
         # Get user IDs for linking
-        admin_user = await users_collection.find_one({"email": "admin@edupredict.com"})
-        teacher_user = await users_collection.find_one({"email": "teacher@edupredict.com"})
-        student_user = await users_collection.find_one({"email": "student@edupredict.com"})
-        analyst_user = await users_collection.find_one({"email": "analyst@edupredict.com"})
+        user_ids = {}
+        for user, user_id in zip(users, user_result.inserted_ids):
+            user_ids[user["email"]] = user_id
         
         # Create students
-        students = await create_sample_students()
-        if students:
-            # Link first student to student user
-            students[0]["user_id"] = student_user["_id"]
-            
-            students_result = await db.students.insert_many(students)
-            logger.info(f"Created {len(students_result.inserted_ids)} students")
+        students = await create_sample_students(user_ids)
+        students_result = await students_collection.insert_many(students)
+        logger.info(f"Created {len(students_result.inserted_ids)} students")
         
         # Create courses
-        courses = await create_sample_courses()
-        if teacher_user:
-            for course in courses:
-                course["teacher_id"] = str(teacher_user["_id"])
-                course["teacher_name"] = f"{teacher_user['first_name']} {teacher_user['last_name']}"
-        
-        courses_result = await db.courses.insert_many(courses)
+        teacher_id = str(user_ids["teacher@edupredict.com"])
+        courses = await create_sample_courses(teacher_id)
+        courses_result = await courses_collection.insert_many(courses)
         logger.info(f"Created {len(courses_result.inserted_ids)} courses")
         
         # Create sample grades
-        if students and courses:
-            grades = []
-            for i, student in enumerate(students[:5]):  # First 5 students
-                for j, course in enumerate(courses):
-                    grade = {
-                        "student_id": student["student_id"],
-                        "course_id": course["code"],
-                        "assignment_name": f"Assignment {j+1}",
-                        "grade_type": "assignment",
-                        "points_earned": 85 + (i * 2) - (j * 3),
-                        "points_possible": 100,
-                        "percentage": 85 + (i * 2) - (j * 3),
-                        "letter_grade": "B+",
-                        "grade_points": 3.3,
-                        "weight": 1.0,
-                        "graded_by": str(teacher_user["_id"]) if teacher_user else "teacher",
-                        "created_at": datetime.utcnow(),
-                        "updated_at": datetime.utcnow()
-                    }
-                    grades.append(grade)
-            
-            if grades:
-                grades_result = await db.grades.insert_many(grades)
-                logger.info(f"Created {len(grades_result.inserted_ids)} grade records")
+        grades = []
+        for student in students:
+            for course in courses:
+                if student["student_id"] in course["students"]:
+                    # Create multiple assignments per course
+                    for i in range(3):
+                        grade = {
+                            "student_id": student["student_id"],
+                            "course_id": course["code"],
+                            "assignment_name": f"Assignment {i+1}",
+                            "grade_type": "assignment",
+                            "points_earned": 85 + (i * 2),
+                            "points_possible": 100,
+                            "percentage": 85 + (i * 2),
+                            "letter_grade": "B+",
+                            "grade_points": 3.3,
+                            "weight": 1.0,
+                            "graded_by": teacher_id,
+                            "created_at": datetime.utcnow(),
+                            "updated_at": datetime.utcnow()
+                        }
+                        grades.append(grade)
+        
+        if grades:
+            grades_result = await grades_collection.insert_many(grades)
+            logger.info(f"Created {len(grades_result.inserted_ids)} grade records")
         
         # Create sample attendance
-        if students and courses:
-            attendance_records = []
-            start_date = date.today() - timedelta(days=30)
-            
-            for i in range(30):  # Last 30 days
-                current_date = start_date + timedelta(days=i)
-                for student in students[:5]:  # First 5 students
-                    for course in courses:
+        attendance_records = []
+        start_date = date.today() - timedelta(days=30)
+        
+        for i in range(30):  # Last 30 days
+            current_date = start_date + timedelta(days=i)
+            # Skip weekends
+            if current_date.weekday() >= 5:
+                continue
+                
+            for student in students:
+                for course in courses:
+                    if student["student_id"] in course["students"]:
                         # 85% attendance rate
                         status = "present" if (i + hash(student["student_id"])) % 10 < 8.5 else "absent"
                         
@@ -248,37 +280,35 @@ async def seed_database():
                             "course_id": course["code"],
                             "date": current_date,
                             "status": status,
-                            "marked_by": str(teacher_user["_id"]) if teacher_user else "teacher",
+                            "marked_by": teacher_id,
                             "created_at": datetime.utcnow(),
                             "updated_at": datetime.utcnow()
                         }
                         attendance_records.append(record)
-            
-            if attendance_records:
-                attendance_result = await db.attendance.insert_many(attendance_records)
-                logger.info(f"Created {len(attendance_result.inserted_ids)} attendance records")
+        
+        if attendance_records:
+            attendance_result = await attendance_collection.insert_many(attendance_records)
+            logger.info(f"Created {len(attendance_result.inserted_ids)} attendance records")
         
         # Create sample notifications
         notifications = [
             {
-                "user_id": str(student_user["_id"]) if student_user else "student",
-                "title": "Grade Updated",
-                "message": "Your grade for Computer Science 101 has been updated.",
-                "type": "grade",
+                "user_id": str(user_ids["student@edupredict.com"]),
+                "title": "Welcome to EduPredict",
+                "message": "Welcome to the EduPredict system! Explore your dashboard to see your academic progress.",
                 "is_read": False,
                 "created_at": datetime.utcnow()
             },
             {
-                "user_id": str(student_user["_id"]) if student_user else "student",
-                "title": "Low Attendance Alert",
-                "message": "Your attendance in Mathematics 201 is below 75%.",
-                "type": "attendance",
+                "user_id": str(user_ids["teacher@edupredict.com"]),
+                "title": "New Semester Started",
+                "message": "Fall 2024 semester has started. Please update your course materials and attendance.",
                 "is_read": False,
                 "created_at": datetime.utcnow()
             }
         ]
         
-        notifications_result = await db.notifications.insert_many(notifications)
+        notifications_result = await notifications_collection.insert_many(notifications)
         logger.info(f"Created {len(notifications_result.inserted_ids)} notifications")
         
         logger.info("✅ Database seeding completed successfully!")

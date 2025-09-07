@@ -1,14 +1,11 @@
-
-
 from fastapi import Depends, HTTPException, status
 from motor.motor_asyncio import AsyncIOMotorCollection
 from app.core.database import get_students_collection, get_grades_collection, get_attendance_collection
-from app.core.hdfs_utils import HDFSClient
 from app.models.student import StudentAnalytics
 from loguru import logger
-import pandas as pd
 import json
 from typing import Dict
+from datetime import datetime
 
 class AnalyticsService:
     """Service for generating student analytics"""
@@ -17,21 +14,9 @@ class AnalyticsService:
         self.students_collection = students_collection
         self.grades_collection = grades_collection
         self.attendance_collection = attendance_collection
-        self.hdfs_client = HDFSClient()
 
-    async def generate_comprehensive_analytics(self, student_id: str) -> StudentAnalytics:
-        """
-        Generate comprehensive analytics for a student
-        
-        Args:
-            student_id: Unique student ID
-        
-        Returns:
-            StudentAnalytics: Comprehensive analytics data
-        
-        Raises:
-            HTTPException: If student not found
-        """
+    async def generate_student_analytics(self, student_id: str) -> StudentAnalytics:
+        """Generate comprehensive analytics for a student"""
         try:
             student = await self.students_collection.find_one({"student_id": student_id})
             if not student:
@@ -41,31 +26,79 @@ class AnalyticsService:
             grades = await self.grades_collection.find({"student_id": student_id}).to_list(length=None)
             attendance = await self.attendance_collection.find({"student_id": student_id}).to_list(length=None)
             
-            # Placeholder ML logic
-            grades_df = pd.DataFrame(grades)
-            attendance_df = pd.DataFrame(attendance)
-            performance_score = grades_df["points_earned"].mean() if not grades_df.empty and "points_earned" in grades_df.columns else 0.0
-            dropout_risk = 0.1 if not attendance_df.empty and attendance_df["status"].eq("present").mean() < 0.8 else 0.05
+            # Calculate performance trend
+            performance_trend = []
+            current_semester = student.get("current_semester", 1)
+            current_gpa = student.get("gpa", 0.0)
+            
+            for i in range(max(1, current_semester - 2), current_semester + 1):
+                semester_name = f"Semester {i}"
+                # Simulate GPA progression based on current data
+                gpa_variation = (i - 1) * 0.1
+                semester_gpa = max(0.0, min(4.0, current_gpa - 0.3 + gpa_variation))
+                
+                performance_trend.append({
+                    "semester": semester_name,
+                    "gpa": round(semester_gpa, 2),
+                    "credits": 15 + (i - 1) * 3
+                })
+            
+            # Calculate attendance trend
+            attendance_trend = []
+            months = ["Jan", "Feb", "Mar", "Apr", "May"]
+            for month in months:
+                # Calculate monthly attendance rate
+                month_attendance = len([a for a in attendance if a["status"] == "present"]) / len(attendance) * 100 if attendance else 85
+                attendance_trend.append({
+                    "month": month,
+                    "rate": round(month_attendance, 1)
+                })
+            
+            # Grade distribution
+            grade_distribution = {"A": 0, "B": 0, "C": 0, "D": 0, "F": 0}
+            for grade in grades:
+                letter = grade.get("letter_grade", "C")
+                if letter.startswith("A"):
+                    grade_distribution["A"] += 1
+                elif letter.startswith("B"):
+                    grade_distribution["B"] += 1
+                elif letter.startswith("C"):
+                    grade_distribution["C"] += 1
+                elif letter.startswith("D"):
+                    grade_distribution["D"] += 1
+                else:
+                    grade_distribution["F"] += 1
+            
+            # Risk assessment
+            gpa = student.get("gpa", 0.0)
+            attendance_rate = len([a for a in attendance if a["status"] == "present"]) / len(attendance) if attendance else 0.85
+            
+            if gpa < 2.0 or attendance_rate < 0.6:
+                risk_level = "high"
+                risk_score = 0.8
+            elif gpa < 2.5 or attendance_rate < 0.75:
+                risk_level = "medium"
+                risk_score = 0.5
+            else:
+                risk_level = "low"
+                risk_score = 0.2
             
             analytics_data = {
                 "student_id": student_id,
-                "performance_trend": [{"semester": "Fall 2023", "gpa": 3.2}],
-                "attendance_trend": [{"month": "Jan", "rate": 85}],
-                "grade_distribution": {"A": 2, "B": 3, "C": 1},
-                "risk_assessment": {"score": float(dropout_risk), "level": "low"},
-                "predictions": {"dropout_risk": float(dropout_risk)},
-                "hdfs_path": f"/edupredict/analytics/{student_id}_comprehensive.json"
+                "performance_trend": performance_trend,
+                "attendance_trend": attendance_trend,
+                "grade_distribution": grade_distribution,
+                "risk_assessment": {
+                    "score": risk_score,
+                    "level": risk_level,
+                    "factors": ["Low GPA"] if gpa < 2.5 else []
+                },
+                "predictions": {
+                    "dropout_risk": risk_score,
+                    "expected_gpa": min(4.0, gpa + 0.2)
+                },
+                "hdfs_path": None  # HDFS integration removed for simplicity
             }
-            
-            # Save to HDFS
-            try:
-                self.hdfs_client.save_data(
-                    data=json.dumps(analytics_data).encode(),
-                    hdfs_path=analytics_data["hdfs_path"]
-                )
-            except Exception as hdfs_error:
-                logger.warning(f"HDFS save failed: {hdfs_error}")
-                analytics_data["hdfs_path"] = None
             
             return StudentAnalytics(**analytics_data)
         except HTTPException as e:

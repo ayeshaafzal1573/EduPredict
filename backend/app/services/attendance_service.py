@@ -1,25 +1,44 @@
-import asyncio
 from typing import List
 from fastapi import HTTPException, status, Depends
 from motor.motor_asyncio import AsyncIOMotorCollection
 from loguru import logger
 from app.core.database import get_attendance_collection
 from app.models.attendance import Attendance, AttendanceCreate, AttendanceUpdate, AttendanceStats
-from app.core.hdfs_utils import HDFSClient
+from datetime import datetime
 
 class AttendanceService:
     """Service for attendance-related operations"""
 
-    def __init__(self, collection: AsyncIOMotorCollection, hdfs_client: HDFSClient):
+    def __init__(self, collection: AsyncIOMotorCollection):
         self.collection = collection
-        self.hdfs_client = hdfs_client
 
     async def create_attendance(self, attendance: AttendanceCreate) -> Attendance:
         """Create a new attendance record"""
         try:
-            result = await self.collection.insert_one(attendance.dict())
+            attendance_dict = attendance.dict()
+            attendance_dict.update({
+                "marked_by": "system",  # This should come from current user
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow()
+            })
+            
+            result = await self.collection.insert_one(attendance_dict)
             attendance_in_db = await self.collection.find_one({"_id": result.inserted_id})
-            return Attendance(**attendance_in_db)
+            
+            # Convert to Attendance model
+            attendance_data = {
+                "id": str(attendance_in_db["_id"]),
+                "student_id": attendance_in_db["student_id"],
+                "course_id": attendance_in_db["course_id"],
+                "date": attendance_in_db["date"],
+                "status": attendance_in_db["status"],
+                "notes": attendance_in_db.get("notes"),
+                "marked_by": attendance_in_db["marked_by"],
+                "created_at": attendance_in_db["created_at"],
+                "updated_at": attendance_in_db["updated_at"]
+            }
+            
+            return Attendance(**attendance_data)
         except Exception as e:
             logger.error(f"Failed to create attendance for student {attendance.student_id}: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -30,25 +49,39 @@ class AttendanceService:
             records = await self.collection.find({"student_id": student_id, "course_id": course_id}).to_list(length=1000)
             if not records:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No attendance records found")
+            
             total = len(records)
+            attended = len([r for r in records if r["status"] == "present"])
+            absent = len([r for r in records if r["status"] == "absent"])
+            late = len([r for r in records if r["status"] == "late"])
+            excused = len([r for r in records if r["status"] == "excused"])
+            
+            attendance_rate = (attended / total * 100) if total > 0 else 0.0
+            
+            # Get date range
+            dates = [r["date"] for r in records]
+            period_start = min(dates) if dates else datetime.now().date()
+            period_end = max(dates) if dates else datetime.now().date()
+            
             stats = {
                 "total_classes": total,
-                "attended": sum(1 for r in records if r["status"] == "present"),
-                "absent": sum(1 for r in records if r["status"] == "absent"),
-                "late": sum(1 for r in records if r["status"] == "late"),
-                "excused": sum(1 for r in records if r["status"] == "excused"),
-                "attendance_rate": (sum(1 for r in records if r["status"] in ["present", "late"]) / total * 100) if total > 0 else 0.0,
-                "period_start": min(r["date"] for r in records),
-                "period_end": max(r["date"] for r in records)
+                "attended": attended,
+                "absent": absent,
+                "late": late,
+                "excused": excused,
+                "attendance_rate": round(attendance_rate, 2),
+                "period_start": period_start,
+                "period_end": period_end,
+                "hdfs_path": None
             }
-            hdfs_path = f"/edupredict/attendance/{student_id}/{course_id}/stats.json"
-            self.hdfs_client.save_data(str(stats).encode(), hdfs_path)
-            stats["hdfs_path"] = hdfs_path
+            
             return AttendanceStats(**stats)
+        except HTTPException as e:
+            raise e
         except Exception as e:
             logger.error(f"Failed to generate attendance stats for student {student_id}: {e}")
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 async def get_attendance_service(collection: AsyncIOMotorCollection = Depends(get_attendance_collection)) -> AttendanceService:
     """Dependency for AttendanceService"""
-    return AttendanceService(collection, HDFSClient())
+    return AttendanceService(collection)

@@ -1,4 +1,3 @@
-// api.js
 import axios from 'axios';
 
 // Base API configuration
@@ -10,9 +9,10 @@ const apiClient = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
+  timeout: 10000, // 10 second timeout
 });
 
-// Attach token dynamically from localStorage for all requests
+// Request interceptor to add auth token
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('accessToken');
   if (token) {
@@ -21,7 +21,7 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Response interceptor to handle 401 → logout
+// Response interceptor to handle errors
 apiClient.interceptors.response.use(
   response => response,
   (error) => {
@@ -33,14 +33,10 @@ apiClient.interceptors.response.use(
   }
 );
 
-export default apiClient;
-
 // -------------------- AUTH API --------------------
 export const authAPI = {
   login: async (email, password) => {
     const response = await apiClient.post('/auth/login', { email, password });
-    const { access_token } = response.data;
-    if (access_token) localStorage.setItem('accessToken', access_token);
     return response.data;
   },
 
@@ -56,217 +52,218 @@ export const authAPI = {
 
   logout: async () => {
     localStorage.removeItem('accessToken');
-    // Optional: await apiClient.post('/auth/logout');
   },
 };
 
 // -------------------- USERS API --------------------
 export const usersAPI = {
-  getUsers: async (params = {}) => (await apiClient.get('/users/', { params })).data,
-  createUser: async (data) => (await apiClient.post('/users/', data)).data,
-  getUserById: async (id) => (await apiClient.get(`/users/${id}/`)).data,
-  updateUser: async (id, data) => (await apiClient.put(`/users/${id}/`, data)).data,
-  deleteUser: async (id) => (await apiClient.delete(`/users/${id}/`)).data,
+  getUsers: async (params = {}) => {
+    const response = await apiClient.get('/users/', { params });
+    return response.data;
+  },
+  
+  createUser: async (data) => {
+    const response = await apiClient.post('/users/', data);
+    return response.data;
+  },
+  
+  getUserById: async (id) => {
+    const response = await apiClient.get(`/users/${id}`);
+    return response.data;
+  },
+  
+  updateUser: async (id, data) => {
+    const response = await apiClient.put(`/users/${id}`, data);
+    return response.data;
+  },
+  
+  deleteUser: async (id) => {
+    const response = await apiClient.delete(`/users/${id}`);
+    return response.data;
+  },
 };
 
 // -------------------- STUDENTS API --------------------
 export const studentsAPI = {
-  getStudents: async (params = {}) => (await apiClient.get('/students', { params })).data,
-  getStudentById: async (id) => (await apiClient.get(`/students/${id}`)).data,
-  createStudent: async (data) => (await apiClient.post('/students', data)).data,
-  updateStudent: async (id, data) => (await apiClient.put(`/students/${id}`, data)).data,
-  getStudentPerformance: async (id) => (await apiClient.get(`/students/${id}/performance`)).data,
-  getStudentAnalytics: async (id) => (await apiClient.get(`/students/${id}/analytics`)).data,
+  getStudents: async (params = {}) => {
+    const response = await apiClient.get('/students', { params });
+    return response.data;
+  },
+  
+  getStudentById: async (id) => {
+    const response = await apiClient.get(`/students/${id}`);
+    return response.data;
+  },
+  
+  createStudent: async (data) => {
+    const response = await apiClient.post('/students', data);
+    return response.data;
+  },
+  
+  updateStudent: async (id, data) => {
+    const response = await apiClient.put(`/students/${id}`, data);
+    return response.data;
+  },
+  
+  getStudentAnalytics: async (id) => {
+    const response = await apiClient.get(`/students/${id}/analytics`);
+    return response.data;
+  },
 };
 
 // -------------------- COURSES API --------------------
 export const coursesAPI = {
-  getCourses: async (params = {}) => (await apiClient.get('/courses', { params })).data,
-  getCourseById: async (id) => (await apiClient.get(`/courses/${id}`)).data,
-  createCourse: async (data) => (await apiClient.post('/courses', data)).data,
-  updateCourse: async (id, data) => (await apiClient.put(`/courses/${id}`, data)).data,
-  deleteCourse: async (id) => (await apiClient.delete(`/courses/${id}`)).data,
+  getCourses: async (params = {}) => {
+    const response = await apiClient.get('/courses', { params });
+    return response.data;
+  },
+  
+  getCourseById: async (id) => {
+    const response = await apiClient.get(`/courses/${id}`);
+    return response.data;
+  },
+  
+  createCourse: async (data) => {
+    const response = await apiClient.post('/courses', data);
+    return response.data;
+  },
+  
+  updateCourse: async (id, data) => {
+    const response = await apiClient.put(`/courses/${id}`, data);
+    return response.data;
+  },
+  
+  deleteCourse: async (id) => {
+    const response = await apiClient.delete(`/courses/${id}`);
+    return response.data;
+  },
 
-  // --- Enrollment Endpoints ---
-  enrollStudent: async (courseId, studentId) =>
-    (await apiClient.post(`/courses/${courseId}/enroll/${studentId}`)).data,
-  unenrollStudent: async (courseId, studentId) =>
-    (await apiClient.delete(`/courses/${courseId}/enroll/${studentId}`)).data,
+  getCourseStudents: async (courseId) => {
+    const response = await apiClient.get(`/courses/${courseId}/students`);
+    return response.data;
+  },
 
-  getCourseStudents: async (courseId) =>
-    (await apiClient.get(`/courses/${courseId}/students`)).data,
+  enrollStudent: async (courseId, studentId) => {
+    const response = await apiClient.post(`/courses/${courseId}/enroll/${studentId}`);
+    return response.data;
+  },
+
+  unenrollStudent: async (courseId, studentId) => {
+    const response = await apiClient.delete(`/courses/${courseId}/enroll/${studentId}`);
+    return response.data;
+  },
 };
-
 
 // -------------------- ATTENDANCE API --------------------
 export const attendanceAPI = {
-  getAttendance: async (params = {}) => (await apiClient.get('/attendance', { params })).data,
-  markAttendance: async (data) => (await apiClient.post('/attendance', data)).data,
-  updateAttendance: async (id, data) => (await apiClient.put(`/attendance/${id}`, data)).data,
-  getStudentAttendance: async (studentId, params = {}) => (await apiClient.get(`/attendance/student/${studentId}`, { params })).data,
+  getAttendance: async (params = {}) => {
+    const response = await apiClient.get('/attendance', { params });
+    return response.data;
+  },
+  
+  markAttendance: async (data) => {
+    const response = await apiClient.post('/attendance', data);
+    return response.data;
+  },
+  
+  createBulkAttendance: async (data) => {
+    const response = await apiClient.post('/attendance/bulk', data);
+    return response.data;
+  },
+  
+  getAttendanceStats: async (studentId, courseId) => {
+    const response = await apiClient.get(`/attendance/${studentId}/${courseId}/stats`);
+    return response.data;
+  },
 };
 
 // -------------------- GRADES API --------------------
 export const gradesAPI = {
-  getGrades: async (params = {}) => (await apiClient.get('/grades', { params })).data,
-  createGrade: async (data) => (await apiClient.post('/grades', data)).data,
-  createBulkGrades: async (data) => (await apiClient.post('/grades/bulk', data)).data,
-  getCourseGradebook: async (courseId) => (await apiClient.get(`/grades/course/${courseId}/gradebook`)).data,
-  updateGrade: async (id, data) => (await apiClient.put(`/grades/${id}`, data)).data,
-  getStudentGrades: async (studentId, params = {}) => (await apiClient.get(`/grades/student/${studentId}`, { params })).data,
+  getGrades: async (params = {}) => {
+    const response = await apiClient.get('/grades', { params });
+    return response.data;
+  },
+  
+  createGrade: async (data) => {
+    const response = await apiClient.post('/grades', data);
+    return response.data;
+  },
+  
+  createBulkGrades: async (data) => {
+    const response = await apiClient.post('/grades/bulk', data);
+    return response.data;
+  },
+  
+  getCourseGradebook: async (courseId) => {
+    const response = await apiClient.get(`/grades/course/${courseId}/gradebook`);
+    return response.data;
+  },
+  
+  getGradeStats: async (studentId, courseId) => {
+    const response = await apiClient.get(`/grades/${studentId}/${courseId}/stats`);
+    return response.data;
+  },
 };
 
 // -------------------- ANALYTICS API --------------------
 export const analyticsAPI = {
   getDropoutPrediction: async (studentId) => {
-    try {
-      const response = await apiClient.get(`/analytics/dropout-prediction/${studentId}`);
-      return response.data;
-    } catch (err) {
-      console.error('Error fetching dropout prediction:', err);
-      return { 
-        student_id: studentId, 
-        risk_score: 0.25, 
-        risk_level: 'low',
-        factors: [],
-        recommendations: []
-      };
-    }
+    const response = await apiClient.get(`/analytics/dropout-prediction/${studentId}`);
+    return response.data;
   },
 
   getGradePredictions: async (studentId) => {
-    try {
-      const response = await apiClient.get(`/analytics/grade-predictions/${studentId}`);
-      return response.data;
-    } catch (err) {
-      console.error('Error fetching grade predictions:', err);
-      return { 
-        student_id: studentId, 
-        overall_predicted_gpa: 3.4,
-        predictions: [
-          {"course": "Computer Science 101", "current": "B+", "predicted": "A-", "confidence": 92},
-          {"course": "Mathematics 201", "current": "B", "predicted": "B+", "confidence": 87}
-        ]
-      };
-    }
+    const response = await apiClient.get(`/analytics/grade-predictions/${studentId}`);
+    return response.data;
   },
 
   getPerformanceTrends: async (studentId) => {
-    try {
-      const response = await apiClient.get(`/analytics/performance-trends/${studentId}`);
-      return response.data;
-    } catch (err) {
-      console.error('Error fetching performance trends:', err);
-      return { 
-        student_id: studentId, 
-        grade_trends: [
-          {"semester": "Fall 2022", "gpa": 2.8, "credits": 15},
-          {"semester": "Spring 2023", "gpa": 3.0, "credits": 16},
-          {"semester": "Fall 2023", "gpa": 3.2, "credits": 18}
-        ]
-      };
-    }
+    const response = await apiClient.get(`/analytics/performance-trends/${studentId}`);
+    return response.data;
   },
 
   getDashboardStats: async (role) => {
-    try {
-      const response = await apiClient.get(`/analytics/dashboard-stats/${role}`);
-      return response.data;
-    } catch (err) {
-      console.error('Error fetching dashboard stats:', err);
-      // Return appropriate fallback based on role
-      if (role === 'student') {
-        return {
-          current_gpa: 3.2,
-          semester_gpa: 3.4,
-          total_credits: 75,
-          completed_credits: 60,
-          attendance_rate: 87,
-          risk_level: "low"
-        };
-      } else if (role === 'teacher') {
-        return {
-          totalStudents: 120,
-          atRiskStudents: 8,
-          averageAttendance: 87,
-          averageGPA: 3.1
-        };
-      } else if (role === 'admin') {
-        return {
-          total_users: 250,
-          active_students: 200,
-          total_teachers: 15,
-          active_courses: 25
-        };
-      }
-      return {};
-    }
-  },
-
-  getClassAnalytics: async (classId) => {
-    try {
-      const response = await apiClient.get(`/analytics/class-analytics/${classId}`);
-      return response.data;
-    } catch (err) {
-      console.error('Error fetching class analytics:', err);
-      return { 
-        class_id: classId, 
-        grade_distribution: {"A": 5, "B": 8, "C": 7, "D": 2, "F": 1},
-        performance_trends: [
-          {"month": "Jan", "average": 82},
-          {"month": "Feb", "average": 85},
-          {"month": "Mar", "average": 83}
-        ],
-        at_risk_students: [
-          {"name": "Student A", "gpa": 2.1, "attendance_rate": 65, "risk_factors": ["Low GPA"]}
-        ],
-        total_students: 23
-      };
-    }
+    const response = await apiClient.get(`/analytics/dashboard-stats/${role}`);
+    return response.data;
   },
 
   getInstitutionAnalytics: async () => {
-    try {
-      const response = await apiClient.get('/analytics/institution-analytics');
-      return response.data;
-    } catch (err) {
-      console.error('Error fetching institution analytics:', err);
-      return {
-        department_distribution: [
-          {"name": "Computer Science", "count": 80},
-          {"name": "Mathematics", "count": 45}
-        ],
-        grade_distribution: {"A": 25, "B": 35, "C": 25, "D": 10, "F": 5}
-      };
-    }
+    const response = await apiClient.get('/analytics/institution-analytics');
+    return response.data;
   },
 
   getAtRiskStudents: async (limit = 20) => {
-    try {
-      const response = await apiClient.get('/analytics/at-risk-students', { params: { limit } });
-      return response.data || []; // ensure always returns an array
-    } catch (err) {
-      console.error('Error fetching at-risk students:', err);
-      return [
-        {
-          student_id: "STU003",
-          student_name: "Mike Johnson",
-          gpa: 2.1,
-          attendance_rate: 65,
-          risk_level: "high",
-          risk_factors: ["Low GPA", "Poor Attendance"]
-        }
-      ];
-    }
+    const response = await apiClient.get('/analytics/at-risk-students', { params: { limit } });
+    return response.data;
+  },
+
+  getStudentAnalytics: async (studentId) => {
+    const response = await apiClient.get(`/analytics/${studentId}`);
+    return response.data;
   },
 };
 
-
 // -------------------- NOTIFICATIONS API --------------------
 export const notificationsAPI = {
-  getNotifications: async (params = {}) => (await apiClient.get('/notifications', { params })).data,
-  createBulkAttendance: async (data) => (await apiClient.post('/attendance/bulk', data)).data,
-  markAsRead: async (id) => (await apiClient.put(`/notifications/${id}/read`)).data,
-  markAllAsRead: async () => (await apiClient.put('/notifications/read-all')).data,
-  deleteNotification: async (id) => (await apiClient.delete(`/notifications/${id}`)).data,
+  getNotifications: async (params = {}) => {
+    const response = await apiClient.get(`/notifications/${params.user_id || 'me'}`);
+    return response.data;
+  },
+  
+  createNotification: async (data) => {
+    const response = await apiClient.post('/notifications', data);
+    return response.data;
+  },
+  
+  markAsRead: async (id) => {
+    const response = await apiClient.put(`/notifications/${id}/read`);
+    return response.data;
+  },
+  
+  markAllAsRead: async () => {
+    const response = await apiClient.put('/notifications/read-all');
+    return response.data;
+  },
 };
+
+export default apiClient;

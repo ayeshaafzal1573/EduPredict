@@ -1,5 +1,3 @@
-
-
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from app.core.config import settings
 from loguru import logger
@@ -10,37 +8,27 @@ client: AsyncIOMotorClient | None = None
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def connect_to_mongo() -> bool:
-    """
-    Initialize MongoDB connection with retry logic
-    
-    Returns:
-        bool: True if connection successful
-    
-    Raises:
-        HTTPException: If connection fails after retries
-    """
+    """Initialize MongoDB connection with retry logic"""
     global client
     try:
         client = AsyncIOMotorClient(
             settings.MONGODB_URL,
             maxPoolSize=100,
             minPoolSize=10,
-            connectTimeoutMS=5000,
-            socketTimeoutMS=5000
+            connectTimeoutMS=30000,
+            socketTimeoutMS=30000,
+            serverSelectionTimeoutMS=30000
         )
-        await client.server_info()  # Test connection
+        # Test connection
+        await client.admin.command('ping')
         logger.info("MongoDB connected successfully")
         return True
     except Exception as e:
         logger.error(f"MongoDB connection failed: {e}")
-        # Don't raise HTTPException during startup
-        logger.warning("MongoDB connection failed, using fallback mode")
         return False
 
 async def close_mongo_connection() -> None:
-    """
-    Close MongoDB connection
-    """
+    """Close MongoDB connection"""
     global client
     if client:
         client.close()
@@ -48,20 +36,13 @@ async def close_mongo_connection() -> None:
         client = None
 
 async def get_collection(collection_name: str) -> AsyncIOMotorCollection:
-    """
-    Get MongoDB collection with validation
-    
-    Args:
-        collection_name: Name of the collection
-    
-    Returns:
-        AsyncIOMotorCollection: MongoDB collection object
-    
-    Raises:
-        HTTPException: If client not initialized or collection invalid
-    """
+    """Get MongoDB collection with validation"""
     if not client:
-        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="MongoDB client not initialized")
+        # Try to reconnect
+        connected = await connect_to_mongo()
+        if not connected:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database connection unavailable")
+    
     return client[settings.MONGODB_DB][collection_name]
 
 async def get_students_collection() -> AsyncIOMotorCollection:
