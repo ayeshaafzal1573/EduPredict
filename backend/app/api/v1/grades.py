@@ -9,6 +9,8 @@ from datetime import datetime
 from loguru import logger
 from bson import ObjectId
 
+from app.models.attendance import Attendance, AttendanceStats
+
 router = APIRouter(prefix="/grades", tags=["Grades"])
 
 @router.get("/course/{course_id}/gradebook")
