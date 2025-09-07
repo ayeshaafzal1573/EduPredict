@@ -278,6 +278,8 @@ const AdminCourses = () => {
               <select name="teacher_id" value={formData.teacher_id} onChange={handleInputChange} required className="w-full px-3 py-2 border rounded-lg">
                 <option value="">Select Teacher</option>
                 {teachers.map(t => <option key={t.id} value={t.id}>{t.first_name} {t.last_name}</option>)}
+                )
+                }
               </select>
               <div className="flex gap-2">
                 <input type="number" name="credits" value={formData.credits} onChange={handleInputChange} min="1" max="6" className="w-1/2 px-3 py-2 border rounded-lg" />
