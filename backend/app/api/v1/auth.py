@@ -5,8 +5,8 @@ from app.core.database import get_users_collection
 from app.models.user import User, UserCreate, UserInDB, Token, LoginRequest, PasswordReset, PasswordResetConfirm
 from motor.motor_asyncio import AsyncIOMotorCollection
 from loguru import logger
-from datetime import timedelta
-import json
+from datetime import datetime, timedelta
+from app.core.security import get_current_user, require_admin, TokenData
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -56,42 +56,19 @@ async def register_user(user: UserCreate, collection: AsyncIOMotorCollection = D
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), collection: AsyncIOMotorCollection = Depends(get_users_collection)):
-    """
-    Authenticate user and generate access token
-    
-    Args:
-        form_data: Login credentials (email/password)
-        collection: Users collection dependency
-    
-    Returns:
-        JWT token with expiration
-    
-    Raises:
-        HTTPException: If credentials invalid or server error
-    """
-    try:
-        user = await collection.find_one({"email": form_data.username})
-        if not user or not verify_password(form_data.password, user["hashed_password"]):
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
-        
-        # Update last login
-        await collection.update_one(
-            {"_id": user["_id"]},
-            {"$set": {"last_login": datetime.utcnow()}}
-        )
-        
-        access_token = create_access_token(
-            data={"sub": str(user["_id"]), "email": user["email"], "role": user["role"]},
-            expires_delta=timedelta(minutes=60)
-        )
-        return Token(access_token=access_token, token_type="bearer", expires_in=3600)
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        logger.error(f"Failed to login user {form_data.username}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+async def login(payload: LoginRequest, collection: AsyncIOMotorCollection = Depends(get_users_collection)):
+    user = await collection.find_one({"email": payload.email})
+    if not user or not verify_password(payload.password, user["hashed_password"]):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    # Update last login timestamp
+    await collection.update_one({"_id": user["_id"]}, {"$set": {"last_login": datetime.utcnow()}})
+
+    access_token = create_access_token(
+        data={"sub": str(user["_id"]), "email": user["email"], "role": user["role"]},
+        expires_delta=timedelta(minutes=60)
+    )
+    return Token(access_token=access_token, token_type="bearer", expires_in=3600)
 @router.get("/me", response_model=User)
 async def get_current_user_info(current_user: TokenData = Depends(get_current_user), collection: AsyncIOMotorCollection = Depends(get_users_collection)):
     """

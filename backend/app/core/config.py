@@ -6,7 +6,7 @@ from pathlib import Path
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     
-    MONGODB_URL: str = "mongodb://localhost:27017/edupredict"
+    MONGODB_URL: str = "mongodb+srv://ayeshaafzal1573:bzRBxk5ae4TcuRO7@cluster0.c8tez.mongodb.net/edupredict?retryWrites=true&w=majority&appName=Cluster0"
     MONGODB_DB: str = "edupredict"
     HDFS_HOST: str = "localhost"
     HDFS_PORT: int = 9000

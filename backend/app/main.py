@@ -18,9 +18,7 @@ async def lifespan(app: FastAPI):
         else:
             logger.warning("⚠️ MongoDB connection failed, running in fallback mode")
         yield
-        if client:
-            await close_mongo_connection()
-            logger.info("✅ MongoDB connection closed")
+        
     except Exception as e:
         logger.error(f"Lifespan error: {e}")
         # Don't raise to prevent startup failure
