@@ -24,12 +24,11 @@ export const AuthProvider = ({ children }) => {
 
       if (storedToken) {
         try {
-          // Verify token and get user info
           const userData = await authAPI.getCurrentUser();
           setUser(userData);
           setToken(storedToken);
         } catch (error) {
-          // Token expired or invalid, clear it
+          console.error('Token validation failed:', error);
           localStorage.removeItem('accessToken');
           setUser(null);
           setToken(null);
@@ -46,12 +45,9 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const response = await authAPI.login(email, password);
 
-      // Store only access token (simplified)
       localStorage.setItem('accessToken', response.access_token);
-
-      // Get user data
+      
       const userData = await authAPI.getCurrentUser();
-
       setUser(userData);
       setToken(response.access_token);
 
@@ -59,19 +55,7 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
-      let errorMessage = 'Login failed';
-
-      if (error.response?.data?.detail) {
-        if (Array.isArray(error.response.data.detail)) {
-          // Handle validation errors
-          errorMessage = error.response.data.detail.map(err => err.msg).join(', ');
-        } else if (typeof error.response.data.detail === 'string') {
-          errorMessage = error.response.data.detail;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
+      const errorMessage = error.message || 'Login failed';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -83,24 +67,11 @@ export const AuthProvider = ({ children }) => {
     try {
       setLoading(true);
       const response = await authAPI.register(userData);
-
       toast.success('Registration successful! Please login.');
       return { success: true, data: response };
     } catch (error) {
       console.error('Registration error:', error);
-      let errorMessage = 'Registration failed';
-
-      if (error.response?.data?.detail) {
-        if (Array.isArray(error.response.data.detail)) {
-          // Handle validation errors
-          errorMessage = error.response.data.detail.map(err => err.msg).join(', ');
-        } else if (typeof error.response.data.detail === 'string') {
-          errorMessage = error.response.data.detail;
-        }
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
+      const errorMessage = error.message || 'Registration failed';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     } finally {
@@ -118,8 +89,6 @@ export const AuthProvider = ({ children }) => {
   const updateUser = (updatedUserData) => {
     setUser(prevUser => ({ ...prevUser, ...updatedUserData }));
   };
-
- 
 
   const value = {
     user,

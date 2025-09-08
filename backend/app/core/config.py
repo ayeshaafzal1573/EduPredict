@@ -5,24 +5,29 @@ from pathlib import Path
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
     
-    MONGODB_URL: str = "mongodb+srv://ayeshaafzal1573:bzRBxk5ae4TcuRO7@cluster0.c8tez.mongodb.net/edupredict?retryWrites=true&w=majority&appName=Cluster0"
+    # Database settings
+    MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB: str = "edupredict"
-    SECRET_KEY: str = "your-secure-secret-key-here-change-in-production"
+    
+    # Security settings
+    SECRET_KEY: str = "your-secure-secret-key-here-change-in-production-12345678901234567890"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    
+    # CORS settings
     CORS_ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1", "*"]
+    
+    # App settings
     APP_NAME: str = "EduPredict"
     LOG_LEVEL: str = "INFO"
+    DEBUG: bool = True
     
-    # Optional settings (removed dependencies that might cause issues)
+    # Optional settings (disabled for now to avoid dependency issues)
     HDFS_HOST: str = "localhost"
     HDFS_PORT: int = 9000
     HDFS_USER: str = "hdfs"
     REDIS_URL: str = "redis://localhost:6379/0"
-    TABLEAU_SERVER: str = "http://localhost:8000"
-    TABLEAU_USERNAME: str = "admin"
-    TABLEAU_PASSWORD: str = "password"
-    TABLEAU_SITE_NAME: str = "default"
-    DROPOUT_MODEL_PATH: str = "app/ml/models/dropout_model.joblib"
     
     model_config = SettingsConfigDict(
         env_file=Path(__file__).parent.parent.parent / ".env",

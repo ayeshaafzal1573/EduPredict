@@ -1,17 +1,55 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import List
-from app.services.grade_service import GradeService, get_grade_service
-from app.models.grade import Grade, GradeCreate, GradeUpdate, GradeStats
-from app.core.security import require_roles, UserRole, get_current_user, TokenData
+from app.core.security import get_current_user, TokenData
 from motor.motor_asyncio import AsyncIOMotorCollection
 from app.core.database import get_grades_collection, get_courses_collection, get_students_collection, get_users_collection
 from datetime import datetime
 from loguru import logger
 from bson import ObjectId
 
-from app.models.attendance import Attendance, AttendanceStats
-
 router = APIRouter(prefix="/grades", tags=["Grades"])
+
+@router.get("/")
+async def get_grades(
+    student_id: str = None,
+    course_id: str = None,
+    limit: int = 100,
+    current_user: TokenData = Depends(get_current_user),
+    grades_collection: AsyncIOMotorCollection = Depends(get_grades_collection)
+):
+    """Get grade records with filters"""
+    try:
+        query = {}
+        
+        if student_id:
+            query["student_id"] = student_id
+        if course_id:
+            query["course_id"] = course_id
+        
+        grades = await grades_collection.find(query).limit(limit).to_list(length=limit)
+        
+        result = []
+        for grade in grades:
+            result.append({
+                "id": str(grade["_id"]),
+                "student_id": grade.get("student_id"),
+                "course_id": grade.get("course_id"),
+                "course_name": grade.get("course_name"),
+                "assignment_name": grade.get("assignment_name"),
+                "grade_type": grade.get("grade_type"),
+                "points_earned": grade.get("points_earned"),
+                "points_possible": grade.get("points_possible"),
+                "percentage": grade.get("percentage"),
+                "letter_grade": grade.get("letter_grade"),
+                "grade_points": grade.get("grade_points"),
+                "created_at": grade.get("created_at"),
+                "updated_at": grade.get("updated_at")
+            })
+        
+        return result
+        
+    except Exception as e:
+        logger.error(f"Error getting grades: {e}")
+        return []
 
 @router.get("/course/{course_id}/gradebook")
 async def get_course_gradebook(
@@ -33,7 +71,13 @@ async def get_course_gradebook(
         })
         
         if not course:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
+            return {
+                "course_id": course_id,
+                "course_name": "Unknown Course",
+                "assignments": [],
+                "students": [],
+                "statistics": {"class_average": 0, "total_students": 0, "total_assignments": 0}
+            }
         
         # Get all grades for this course
         grades = await grades_collection.find({"course_id": course["code"]}).to_list(length=None)
@@ -58,10 +102,8 @@ async def get_course_gradebook(
             if student:
                 user = await users_collection.find_one({"_id": ObjectId(student["user_id"])})
                 if user:
-                    # Get student's grades for this course
                     student_grades = [g for g in grades if g["student_id"] == student_id]
                     
-                    # Organize grades by assignment
                     grade_dict = {}
                     total_points = 0
                     total_possible = 0
@@ -75,7 +117,6 @@ async def get_course_gradebook(
                         total_points += grade["points_earned"]
                         total_possible += grade["points_possible"]
                     
-                    # Calculate current grade
                     current_percentage = (total_points / total_possible * 100) if total_possible > 0 else 0
                     current_grade = calculate_letter_grade(current_percentage)
                     
@@ -87,7 +128,6 @@ async def get_course_gradebook(
                         "current_percentage": round(current_percentage, 1)
                     })
         
-        # Calculate statistics
         total_students = len(students_data)
         class_average = sum(s["current_percentage"] for s in students_data) / total_students if total_students > 0 else 0
         
@@ -102,11 +142,16 @@ async def get_course_gradebook(
                 "total_assignments": len(assignments)
             }
         }
-    except HTTPException as e:
-        raise e
+        
     except Exception as e:
         logger.error(f"Error getting course gradebook: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        return {
+            "course_id": course_id,
+            "course_name": "Unknown Course",
+            "assignments": [],
+            "students": [],
+            "statistics": {"class_average": 0, "total_students": 0, "total_assignments": 0}
+        }
 
 def calculate_letter_grade(percentage):
     """Convert percentage to letter grade"""
@@ -124,7 +169,7 @@ def calculate_letter_grade(percentage):
     elif percentage >= 60: return "D-"
     else: return "F"
 
-@router.post("/bulk", dependencies=[Depends(require_roles([UserRole.ADMIN, UserRole.TEACHER]))])
+@router.post("/bulk")
 async def create_bulk_grades(
     bulk_data: dict,
     current_user: TokenData = Depends(get_current_user),
@@ -139,9 +184,8 @@ async def create_bulk_grades(
         grades = bulk_data.get("grades", [])
         
         if not all([course_id, assignment_name, grade_type, points_possible]):
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required fields")
+            raise HTTPException(status_code=400, detail="Missing required fields")
         
-        # Prepare grade documents
         grade_docs = []
         for grade in grades:
             points_earned = grade.get("points_earned", 0)
@@ -167,14 +211,16 @@ async def create_bulk_grades(
             }
             grade_docs.append(doc)
         
-        # Insert grades
         if grade_docs:
             await grades_collection.insert_many(grade_docs)
         
         return {"message": f"Bulk grades created successfully for {len(grade_docs)} students"}
+        
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating bulk grades: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to create bulk grades")
 
 def percentage_to_gpa(percentage):
     """Convert percentage to GPA points"""
@@ -191,25 +237,3 @@ def percentage_to_gpa(percentage):
     elif percentage >= 63: return 1.0
     elif percentage >= 60: return 0.7
     else: return 0.0
-
-@router.post("/", response_model=Attendance, dependencies=[Depends(require_roles([UserRole.ADMIN, UserRole.TEACHER]))])
-async def create_grade(grade: GradeCreate, service: GradeService = Depends(get_grade_service)):
-    """Create a new grade record (Admin/Teacher only)"""
-    try:
-        return await service.create_grade(grade)
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        logger.error(f"Error creating grade: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-@router.get("/{student_id}/{course_id}/stats", response_model=AttendanceStats)
-async def get_grade_stats(student_id: str, course_id: str, service: GradeService = Depends(get_grade_service)):
-    """Retrieve grade statistics for a student in a course"""
-    try:
-        return await service.generate_grade_stats(student_id, course_id)
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        logger.error(f"Error getting grade stats: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))

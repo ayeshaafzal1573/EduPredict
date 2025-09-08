@@ -70,7 +70,7 @@ async def create_sample_students(user_ids):
     students = [
         {
             "student_id": "STU001",
-            "user_id": user_ids.get("student@edupredict.com"),
+            "user_id": str(user_ids.get("student@edupredict.com")),
             "date_of_birth": date(2002, 5, 15),
             "gender": "female",
             "department": "Computer Science",
@@ -87,7 +87,7 @@ async def create_sample_students(user_ids):
         },
         {
             "student_id": "STU002",
-            "user_id": ObjectId(),  # Placeholder user
+            "user_id": str(ObjectId()),
             "date_of_birth": date(2001, 8, 22),
             "gender": "male",
             "department": "Engineering",
@@ -104,7 +104,7 @@ async def create_sample_students(user_ids):
         },
         {
             "student_id": "STU003",
-            "user_id": ObjectId(),  # Placeholder user
+            "user_id": str(ObjectId()),
             "date_of_birth": date(2003, 1, 10),
             "gender": "male",
             "department": "Mathematics",
@@ -236,11 +236,11 @@ async def seed_database():
         for student in students:
             for course in courses:
                 if student["student_id"] in course["students"]:
-                    # Create multiple assignments per course
                     for i in range(3):
                         grade = {
                             "student_id": student["student_id"],
                             "course_id": course["code"],
+                            "course_name": course["name"],
                             "assignment_name": f"Assignment {i+1}",
                             "grade_type": "assignment",
                             "points_earned": 85 + (i * 2),
@@ -263,16 +263,14 @@ async def seed_database():
         attendance_records = []
         start_date = date.today() - timedelta(days=30)
         
-        for i in range(30):  # Last 30 days
+        for i in range(30):
             current_date = start_date + timedelta(days=i)
-            # Skip weekends
-            if current_date.weekday() >= 5:
+            if current_date.weekday() >= 5:  # Skip weekends
                 continue
                 
             for student in students:
                 for course in courses:
                     if student["student_id"] in course["students"]:
-                        # 85% attendance rate
                         status = "present" if (i + hash(student["student_id"])) % 10 < 8.5 else "absent"
                         
                         record = {
@@ -296,6 +294,7 @@ async def seed_database():
                 "user_id": str(user_ids["student@edupredict.com"]),
                 "title": "Welcome to EduPredict",
                 "message": "Welcome to the EduPredict system! Explore your dashboard to see your academic progress.",
+                "type": "info",
                 "is_read": False,
                 "created_at": datetime.utcnow()
             },
@@ -303,6 +302,7 @@ async def seed_database():
                 "user_id": str(user_ids["teacher@edupredict.com"]),
                 "title": "New Semester Started",
                 "message": "Fall 2024 semester has started. Please update your course materials and attendance.",
+                "type": "announcement",
                 "is_read": False,
                 "created_at": datetime.utcnow()
             }

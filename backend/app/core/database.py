@@ -1,23 +1,21 @@
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorCollection
 from app.core.config import settings
 from loguru import logger
-from tenacity import retry, stop_after_attempt, wait_exponential
-from fastapi import HTTPException, status
+from typing import Optional
 
-client: AsyncIOMotorClient | None = None
+client: Optional[AsyncIOMotorClient] = None
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 async def connect_to_mongo() -> bool:
-    """Initialize MongoDB connection with retry logic"""
+    """Initialize MongoDB connection"""
     global client
     try:
         client = AsyncIOMotorClient(
             settings.MONGODB_URL,
-            maxPoolSize=100,
-            minPoolSize=10,
-            connectTimeoutMS=30000,
-            socketTimeoutMS=30000,
-            serverSelectionTimeoutMS=30000
+            maxPoolSize=10,
+            minPoolSize=1,
+            connectTimeoutMS=5000,
+            socketTimeoutMS=5000,
+            serverSelectionTimeoutMS=5000
         )
         # Test connection
         await client.admin.command('ping')
@@ -37,11 +35,11 @@ async def close_mongo_connection() -> None:
 
 async def get_collection(collection_name: str) -> AsyncIOMotorCollection:
     """Get MongoDB collection with validation"""
+    global client
     if not client:
-        # Try to reconnect
         connected = await connect_to_mongo()
         if not connected:
-            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Database connection unavailable")
+            raise Exception("Database connection unavailable")
     
     return client[settings.MONGODB_DB][collection_name]
 
