@@ -32,6 +32,7 @@ async def get_all_courses(
         for course in courses:
             course_data = {
                 "id": str(course["_id"]),
+                "_id": str(course["_id"]),
                 "name": course.get("name", ""),
                 "code": course.get("code", ""),
                 "description": course.get("description", ""),
@@ -89,6 +90,7 @@ async def get_course_students(
                 if user:
                     students.append({
                         "id": student_id,
+                        "student_id": student_id,
                         "name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
                         "email": user.get("email", ""),
                         "attendance": 85,
@@ -132,7 +134,7 @@ async def enroll_student(
             {"_id": course["_id"]},
             {
                 "$addToSet": {"students": student_id},
-                "$inc": {"student_count": 1}
+                "$set": {"updated_at": datetime.utcnow()}
             }
         )
         
@@ -166,7 +168,7 @@ async def unenroll_student(
             {"_id": course["_id"]},
             {
                 "$pull": {"students": student_id},
-                "$inc": {"student_count": -1}
+                "$set": {"updated_at": datetime.utcnow()}
             }
         )
         
@@ -182,7 +184,8 @@ async def unenroll_student(
 async def create_course(
     course: CourseCreate,
     current_user: TokenData = Depends(get_current_user),
-    courses_collection: AsyncIOMotorCollection = Depends(get_courses_collection)
+    courses_collection: AsyncIOMotorCollection = Depends(get_courses_collection),
+    users_collection: AsyncIOMotorCollection = Depends(get_users_collection)
 ):
     """Create a new course"""
     try:
@@ -190,8 +193,16 @@ async def create_course(
         if existing:
             raise HTTPException(status_code=409, detail="Course code already exists")
         
+        # Get teacher name if teacher_id provided
+        teacher_name = ""
+        if course.teacher_id:
+            teacher = await users_collection.find_one({"_id": ObjectId(course.teacher_id)})
+            if teacher:
+                teacher_name = f"{teacher.get('first_name', '')} {teacher.get('last_name', '')}".strip()
+        
         course_dict = course.dict()
         course_dict.update({
+            "teacher_name": teacher_name,
             "students": [],
             "student_count": 0,
             "is_active": True,
@@ -228,6 +239,7 @@ async def get_course(
         
         return {
             "id": str(course["_id"]),
+            "_id": str(course["_id"]),
             "name": course.get("name", ""),
             "code": course.get("code", ""),
             "description": course.get("description", ""),
@@ -252,3 +264,85 @@ async def get_course(
     except Exception as e:
         logger.error(f"Error getting course: {e}")
         raise HTTPException(status_code=500, detail="Failed to get course")
+
+@router.put("/{course_id}")
+async def update_course(
+    course_id: str,
+    course_update: CourseUpdate,
+    current_user: TokenData = Depends(get_current_user),
+    courses_collection: AsyncIOMotorCollection = Depends(get_courses_collection),
+    users_collection: AsyncIOMotorCollection = Depends(get_users_collection)
+):
+    """Update a course"""
+    try:
+        # Find course
+        course = await courses_collection.find_one({
+            "$or": [
+                {"_id": ObjectId(course_id) if ObjectId.is_valid(course_id) else None},
+                {"code": course_id}
+            ]
+        })
+        
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        update_data = course_update.dict(exclude_unset=True)
+        
+        # Get teacher name if teacher_id is being updated
+        if "teacher_id" in update_data and update_data["teacher_id"]:
+            teacher = await users_collection.find_one({"_id": ObjectId(update_data["teacher_id"])})
+            if teacher:
+                update_data["teacher_name"] = f"{teacher.get('first_name', '')} {teacher.get('last_name', '')}".strip()
+        
+        update_data["updated_at"] = datetime.utcnow()
+        
+        result = await courses_collection.update_one(
+            {"_id": course["_id"]},
+            {"$set": update_data}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Course not found or no changes made")
+        
+        return {"message": "Course updated successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating course: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update course")
+
+@router.delete("/{course_id}")
+async def delete_course(
+    course_id: str,
+    current_user: TokenData = Depends(get_current_user),
+    courses_collection: AsyncIOMotorCollection = Depends(get_courses_collection)
+):
+    """Delete a course"""
+    try:
+        course = await courses_collection.find_one({
+            "$or": [
+                {"_id": ObjectId(course_id) if ObjectId.is_valid(course_id) else None},
+                {"code": course_id}
+            ]
+        })
+        
+        if not course:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        # Soft delete - mark as inactive
+        result = await courses_collection.update_one(
+            {"_id": course["_id"]},
+            {"$set": {"is_active": False, "updated_at": datetime.utcnow()}}
+        )
+        
+        if result.modified_count == 0:
+            raise HTTPException(status_code=404, detail="Course not found")
+        
+        return {"message": "Course deleted successfully"}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting course: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete course")

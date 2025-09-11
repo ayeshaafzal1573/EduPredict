@@ -54,6 +54,13 @@ async def create_user(
 ):
     """Create a new user"""
     try:
+        # Validate required fields
+        if not user_data.email or not user_data.password:
+            raise HTTPException(status_code=400, detail="Email and password are required")
+        
+        if not user_data.first_name or not user_data.last_name:
+            raise HTTPException(status_code=400, detail="First name and last name are required")
+        
         # Check if email already exists
         existing = await users_collection.find_one({"email": user_data.email})
         if existing:
@@ -125,6 +132,15 @@ async def update_user(
         if not update_data:
             raise HTTPException(status_code=400, detail="No data to update")
         
+        # Validate email uniqueness if email is being updated
+        if "email" in update_data:
+            existing = await users_collection.find_one({
+                "email": update_data["email"],
+                "_id": {"$ne": ObjectId(user_id)}
+            })
+            if existing:
+                raise HTTPException(status_code=409, detail="Email already exists")
+        
         update_data["updated_at"] = datetime.utcnow()
         
         result = await users_collection.update_one(
@@ -133,7 +149,7 @@ async def update_user(
         )
         
         if result.modified_count == 0:
-            raise HTTPException(status_code=404, detail="User not found")
+            raise HTTPException(status_code=404, detail="User not found or no changes made")
         
         return {"message": "User updated successfully"}
         

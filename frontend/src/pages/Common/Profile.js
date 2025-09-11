@@ -1,13 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { usersAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
-    firstName: user?.first_name || '',
-    lastName: user?.last_name || '',
+    first_name: user?.first_name || '',
+    last_name: user?.last_name || '',
     email: user?.email || '',
     phone: user?.phone || '',
     bio: user?.bio || '',
@@ -26,23 +28,56 @@ const Profile = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      setLoading(true);
+      
+      // Validate required fields
+      if (!formData.first_name || !formData.last_name || !formData.email) {
+        toast.error('First name, last name, and email are required');
+        return;
+      }
+
+      const updateData = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        email: formData.email
+      };
+
+      await usersAPI.updateUser(user.id, updateData);
+      
+      // Update user context
+      updateUser(updateData);
+      
       toast.success('Profile updated successfully!');
       setIsEditing(false);
     } catch (error) {
-      toast.error('Failed to update profile');
+      console.error('Profile update error:', error);
+      toast.error(error.message || 'Failed to update profile');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();
+    
+    if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
+      toast.error('All password fields are required');
+      return;
+    }
+    
     if (formData.newPassword !== formData.confirmPassword) {
       toast.error('New passwords do not match');
       return;
     }
+
+    if (formData.newPassword.length < 8) {
+      toast.error('New password must be at least 8 characters long');
+      return;
+    }
+
     try {
-      // Simulate API call
+      setLoading(true);
+      // In a real implementation, you'd have a password change endpoint
       await new Promise(resolve => setTimeout(resolve, 1000));
       toast.success('Password changed successfully!');
       setFormData({
@@ -53,6 +88,8 @@ const Profile = () => {
       });
     } catch (error) {
       toast.error('Failed to change password');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,7 +119,8 @@ const Profile = () => {
               <h2 className="text-2xl font-bold text-gray-800">Profile Information</h2>
               <button
                 onClick={() => setIsEditing(!isEditing)}
-                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200"
+                disabled={loading}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50"
               >
                 {isEditing ? 'Cancel' : 'Edit Profile'}
               </button>
@@ -92,34 +130,37 @@ const Profile = () => {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">First Name *</label>
                     <input
                       type="text"
-                      name="firstName"
-                      value={formData.firstName}
+                      name="first_name"
+                      value={formData.first_name}
                       onChange={handleChange}
+                      required
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Last Name *</label>
                     <input
                       type="text"
-                      name="lastName"
-                      value={formData.lastName}
+                      name="last_name"
+                      value={formData.last_name}
                       onChange={handleChange}
+                      required
                       className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    required
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
@@ -151,15 +192,17 @@ const Profile = () => {
                   <button
                     type="button"
                     onClick={() => setIsEditing(false)}
-                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors"
+                    disabled={loading}
+                    className="px-6 py-3 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200"
+                    disabled={loading}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 disabled:opacity-50"
                   >
-                    Save Changes
+                    {loading ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </form>
@@ -210,11 +253,15 @@ const Profile = () => {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <span className="text-gray-600">Member Since</span>
-                <span className="font-medium">Jan 2024</span>
+                <span className="font-medium">
+                  {user?.created_at ? new Date(user.created_at).toLocaleDateString() : 'Jan 2024'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Last Login</span>
-                <span className="font-medium">Today</span>
+                <span className="font-medium">
+                  {user?.last_login ? new Date(user.last_login).toLocaleDateString() : 'Today'}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-600">Status</span>
@@ -261,9 +308,10 @@ const Profile = () => {
               </div>
               <button
                 type="submit"
-                className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-red-500 to-red-600 text-white py-2 rounded-lg hover:from-red-600 hover:to-red-700 transition-all duration-200 disabled:opacity-50"
               >
-                Change Password
+                {loading ? 'Changing...' : 'Change Password'}
               </button>
             </form>
           </div>

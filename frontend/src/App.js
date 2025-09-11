@@ -261,7 +261,6 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-            
                 <Route
                   path="admin-courses"
                   element={
@@ -331,7 +330,21 @@ function App() {
               </Route>
 
               {/* Error Routes */}
-              <Route path="/unauthorized" element={<div className="text-center mt-20">Unauthorized Access</div>} />
+              <Route path="/unauthorized" element={
+                <div className="min-h-screen flex items-center justify-center bg-gray-50">
+                  <div className="text-center">
+                    <div className="text-red-500 text-6xl mb-4">🚫</div>
+                    <h1 className="text-2xl font-bold text-gray-900 mb-2">Unauthorized Access</h1>
+                    <p className="text-gray-600 mb-4">You don't have permission to access this page.</p>
+                    <button
+                      onClick={() => window.history.back()}
+                      className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+                    >
+                      Go Back
+                    </button>
+                  </div>
+                </div>
+              } />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </div>

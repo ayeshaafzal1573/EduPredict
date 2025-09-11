@@ -16,12 +16,13 @@ class CourseBase(MongoBaseModel):
     schedule: Optional[str] = Field(None, max_length=200)
     room: Optional[str] = Field(None, max_length=100)
     max_students: Optional[int] = Field(None, ge=1, le=500)
+    teacher_id: Optional[str] = None
 
     @validator("code")
     def validate_code(cls, v):
         """Ensure course code follows a specific format (e.g., CS-101)"""
-        if not v.replace("-", "").isalnum():
-            raise ValueError("Course code must be alphanumeric with optional hyphens")
+        if not v.replace("-", "").replace(" ", "").isalnum():
+            raise ValueError("Course code must be alphanumeric with optional hyphens or spaces")
         return v
 
 
@@ -40,12 +41,18 @@ class CourseUpdate(BaseModel):
     schedule: Optional[str] = Field(None, max_length=200)
     room: Optional[str] = Field(None, max_length=100)
     max_students: Optional[int] = Field(None, ge=1, le=500)
+    teacher_id: Optional[str] = None
     is_active: Optional[bool] = None
+
+    @validator("code")
+    def validate_code(cls, v):
+        if v and not v.replace("-", "").replace(" ", "").isalnum():
+            raise ValueError("Course code must be alphanumeric with optional hyphens or spaces")
+        return v
 
 
 class Course(CourseBase):
     id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    teacher_id: str
     teacher_name: Optional[str] = None
     students: List[str] = Field(default_factory=list)
     student_count: int = 0

@@ -18,21 +18,20 @@ const Layout = () => {
       case 'student':
         return [
           ...baseItems,
+          { name: 'Performance', href: '/performance', icon: '📊' },
+          { name: 'Predictions', href: '/predictions', icon: '🔮' },
           { name: 'Attendance', href: '/attendance', icon: '📅' },
           { name: 'Courses', href: '/student-courses', icon: '📚' },
-          { name: 'Grades', href: '/grades', icon: '✏️' },
-          { name: 'Analytics', href: '/analytics', icon: '📊' },
           { name: 'Notifications', href: '/notifications', icon: '🔔' },
         ];
       case 'teacher':
         return [
           ...baseItems,
+          { name: 'Classes', href: '/classes', icon: '👥' },
           { name: 'Attendance', href: '/teacher-attendance', icon: '📋' },
-
-          { name: 'Classes', href: '/classes', icon: '📚' },
           { name: 'Grades', href: '/grades', icon: '✏️' },
-          { name: 'Analytics', href: '/analytics', icon: '📈' },
-          { name: 'Notifications', href: '/notifications', icon: '🔔' },
+          { name: 'Analytics', href: '/teacher-analytics', icon: '📈' },
+          { name: 'Notifications', href: '/teacher-notifications', icon: '🔔' },
         ];
       case 'admin':
         return [
@@ -42,17 +41,24 @@ const Layout = () => {
           { name: 'Analytics', href: '/admin-analytics', icon: '📊' },
           { name: 'Notifications', href: '/admin-notifications', icon: '🔔' },
         ];
+      case 'analyst':
+        return [
+          ...baseItems,
+          { name: 'Models', href: '/models', icon: '🤖' },
+          { name: 'Reports', href: '/reports', icon: '📈' },
+          { name: 'Predictions', href: '/analyst-predictions', icon: '🔮' },
+          { name: 'Tableau', href: '/tableau', icon: '📊' },
+          { name: 'Notifications', href: '/analyst-notifications', icon: '🔔' },
+        ];
       default:
         return baseItems;
     }
   };
 
-
   const navigationItems = getNavigationItems();
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
-
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white/90 backdrop-blur-sm shadow-xl transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
         <div className="flex items-center justify-center h-16 bg-gradient-to-r from-blue-600 to-purple-600">
@@ -86,8 +92,7 @@ const Layout = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1  flex flex-col">
-
+      <div className="flex-1 flex flex-col">
         {/* Top Header */}
         <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-white/20">
           <div className="px-4 sm:px-6 lg:px-8">
@@ -134,7 +139,7 @@ const Layout = () => {
         </header>
 
         {/* Main Content */}
-        <main className="p-6">
+        <main className="flex-1 p-6">
           <Outlet />
         </main>
       </div>

@@ -22,6 +22,22 @@ class UserBase(MongoBaseModel):
     role: UserRole
     is_active: bool = True
 
+    @validator("email")
+    def validate_email(cls, v):
+        """Ensure email is valid"""
+        if not v or "@" not in v:
+            raise ValueError("Valid email address is required")
+        return v.lower()
+
+    @validator("first_name", "last_name")
+    def validate_names(cls, v):
+        """Ensure names are not empty and contain only valid characters"""
+        if not v or not v.strip():
+            raise ValueError("Name cannot be empty")
+        if not v.replace(" ", "").replace("-", "").replace("'", "").isalpha():
+            raise ValueError("Name can only contain letters, spaces, hyphens, and apostrophes")
+        return v.strip()
+
 
 class UserCreate(UserBase):
     """User creation model"""
@@ -30,8 +46,12 @@ class UserCreate(UserBase):
     @validator("password")
     def validate_password(cls, v):
         """Ensure password meets complexity requirements"""
-        if not any(c.isupper() for c in v) or not any(c.isdigit() for c in v):
-            raise ValueError("Password must contain at least one uppercase letter and one digit")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one digit")
         return v
 
 
@@ -42,6 +62,22 @@ class UserUpdate(BaseModel):
     last_name: Optional[str] = Field(None, min_length=1, max_length=50)
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
+
+    @validator("email")
+    def validate_email(cls, v):
+        if v and "@" not in v:
+            raise ValueError("Valid email address is required")
+        return v.lower() if v else v
+
+    @validator("first_name", "last_name")
+    def validate_names(cls, v):
+        if v is not None:
+            if not v.strip():
+                raise ValueError("Name cannot be empty")
+            if not v.replace(" ", "").replace("-", "").replace("'", "").isalpha():
+                raise ValueError("Name can only contain letters, spaces, hyphens, and apostrophes")
+            return v.strip()
+        return v
 
 
 class UserInDB(UserBase):
@@ -80,10 +116,28 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+    @validator("email")
+    def validate_email(cls, v):
+        if not v or "@" not in v:
+            raise ValueError("Valid email address is required")
+        return v.lower()
+
+    @validator("password")
+    def validate_password(cls, v):
+        if not v or len(v) < 1:
+            raise ValueError("Password is required")
+        return v
+
 
 class PasswordReset(BaseModel):
     """Password reset model"""
     email: EmailStr
+
+    @validator("email")
+    def validate_email(cls, v):
+        if not v or "@" not in v:
+            raise ValueError("Valid email address is required")
+        return v.lower()
 
 
 class PasswordResetConfirm(BaseModel):
@@ -94,6 +148,10 @@ class PasswordResetConfirm(BaseModel):
     @validator("new_password")
     def validate_new_password(cls, v):
         """Ensure new password meets complexity requirements"""
-        if not any(c.isupper() for c in v) or not any(c.isdigit() for c in v):
-            raise ValueError("New password must contain at least one uppercase letter and one digit")
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one digit")
         return v
