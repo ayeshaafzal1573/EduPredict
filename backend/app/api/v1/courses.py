@@ -129,14 +129,14 @@ async def enroll_student(
         if not student:
             raise HTTPException(status_code=404, detail="Student not found")
         
-        # Add student to course
         await courses_collection.update_one(
-            {"_id": course["_id"]},
-            {
-                "$addToSet": {"students": student_id},
-                "$set": {"updated_at": datetime.utcnow()}
-            }
-        )
+    {"_id": course["_id"]},
+    {
+        "$addToSet": {"students": student_id}, 
+        "$set": {"updated_at": datetime.utcnow()}
+    }
+)
+
         
         return {"message": "Student enrolled successfully"}
         

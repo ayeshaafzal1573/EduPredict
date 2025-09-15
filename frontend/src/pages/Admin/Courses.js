@@ -178,6 +178,7 @@ const AdminCourses = () => {
       await coursesAPI.enrollStudent(selectedEnrollCourse.id, selectedStudentId);
       toast.success('Student enrolled successfully');
       const students = await coursesAPI.getCourseStudents(selectedEnrollCourse.id);
+      console.log(students)
       setEnrolledStudents(students);
       setSelectedStudentId('');
       fetchCourses(); // Refresh courses list
@@ -493,7 +494,10 @@ const AdminCourses = () => {
                 >
                   <option value="">Select Student to Enroll</option>
                   {allStudents.filter(s => !enrolledStudents.some(e => e.student_id === s.id)).map(s => (
-                    <option key={s.id} value={s.id}>{s.first_name} {s.last_name}</option>
+                    <option key={s.student_id} value={s.student_id}>
+                      {s.first_name} {s.last_name}
+                    </option>
+
                   ))}
                 </select>
                 <button 
