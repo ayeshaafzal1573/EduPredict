@@ -15,7 +15,8 @@ async def get_all_courses(
     teacher_id: str = None,
     student_id: str = None,
     current_user: TokenData = Depends(get_current_user),
-    courses_collection: AsyncIOMotorCollection = Depends(get_courses_collection)
+    courses_collection: AsyncIOMotorCollection = Depends(get_courses_collection),
+    students_collection: AsyncIOMotorCollection = Depends(get_students_collection)
 ):
     """Retrieve courses with optional filters"""
     try:
@@ -27,7 +28,6 @@ async def get_all_courses(
             query["students"] = {"$in": [student_id]}
         
         courses = await courses_collection.find(query).to_list(length=None)
-        
         result = []
         for course in courses:
             course_data = {
@@ -130,12 +130,12 @@ async def enroll_student(
             raise HTTPException(status_code=404, detail="Student not found")
         
         await courses_collection.update_one(
-    {"_id": course["_id"]},
-    {
-        "$addToSet": {"students": student_id}, 
-        "$set": {"updated_at": datetime.utcnow()}
-    }
-)
+            {"_id": course["_id"]},
+            {
+                "$addToSet": {"students": student_id}, 
+                "$set": {"updated_at": datetime.utcnow()}
+            }
+        )
 
         
         return {"message": "Student enrolled successfully"}

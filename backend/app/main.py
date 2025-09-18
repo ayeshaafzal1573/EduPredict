@@ -34,7 +34,7 @@ app = FastAPI(
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
+    allow_origins=settings.CORS_ALLOWED_ORIGINS + ["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -64,8 +64,9 @@ async def health_check():
 
 @app.exception_handler(404)
 async def not_found_handler(request, exc):
-    return {"detail": "Endpoint not found", "status_code": 404}
+    return HTTPException(status_code=404, detail="Endpoint not found")
 
 @app.exception_handler(500)
 async def internal_error_handler(request, exc):
-    return {"detail": "Internal server error", "status_code": 500}
+    logger.error(f"Internal server error: {exc}")
+    return HTTPException(status_code=500, detail="Internal server error")

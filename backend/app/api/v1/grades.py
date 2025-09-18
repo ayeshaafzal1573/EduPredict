@@ -14,14 +14,23 @@ async def get_grades(
     course_id: str = None,
     limit: int = 100,
     current_user: TokenData = Depends(get_current_user),
-    grades_collection: AsyncIOMotorCollection = Depends(get_grades_collection)
+    grades_collection: AsyncIOMotorCollection = Depends(get_grades_collection),
+    students_collection: AsyncIOMotorCollection = Depends(get_students_collection)
 ):
     """Get grade records with filters"""
     try:
         query = {}
         
         if student_id:
-            query["student_id"] = student_id
+            # Handle 'me' parameter
+            if student_id == "me":
+                student = await students_collection.find_one({"user_id": current_user.user_id})
+                if student:
+                    query["student_id"] = student["student_id"]
+                else:
+                    return []
+            else:
+                query["student_id"] = student_id
         if course_id:
             query["course_id"] = course_id
         

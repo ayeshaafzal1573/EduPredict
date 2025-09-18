@@ -21,9 +21,9 @@ const StudentPerformance = () => {
       setError(null);
 
       const [studentData, performanceTrends, grades] = await Promise.all([
-        studentsAPI.getStudentById(user.id),
-        analyticsAPI.getPerformanceTrends(user.id),
-        gradesAPI.getGrades({ student_id: user.id, limit: 50 })
+        studentsAPI.getStudentById('me'),
+        analyticsAPI.getPerformanceTrends('me'),
+        gradesAPI.getGrades({ student_id: 'me', limit: 50 })
       ]);
 
       // Process the data

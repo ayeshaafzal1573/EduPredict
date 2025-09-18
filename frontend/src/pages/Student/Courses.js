@@ -19,7 +19,7 @@ const StudentCourses = () => {
       setError(null);
 
       // Always fetch from API - no fallback data in frontend
-      const studentCourses = await coursesAPI.getCourses({ student_id: user.id });
+      const studentCourses = await coursesAPI.getCourses({ student_id: 'me' });
       setCourses(studentCourses);
 
     } catch (err) {

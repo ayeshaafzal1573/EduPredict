@@ -493,7 +493,7 @@ const AdminCourses = () => {
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Student to Enroll</option>
-                  {allStudents.filter(s => !enrolledStudents.some(e => e.student_id === s.id)).map(s => (
+                  {allStudents.filter(s => !enrolledStudents.some(e => e.student_id === s.id || e.id === s.id)).map(s => (
                     <option key={s.student_id} value={s.student_id}>
                       {s.first_name} {s.last_name}
                     </option>

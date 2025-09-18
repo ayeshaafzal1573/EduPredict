@@ -25,15 +25,22 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   response => response,
   (error) => {
-    console.error('API Error:', error.response?.data || error.message);
+    const errorDetails = error.response?.data || error.message;
+    console.error('API Error:', errorDetails);
     
     if (error.response?.status === 401) {
       localStorage.removeItem('accessToken');
-      window.location.href = '/login';
+      // Only redirect if not already on login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
     }
     
     // Return a more user-friendly error
-    const errorMessage = error.response?.data?.detail || error.message || 'An error occurred';
+    const errorMessage = error.response?.data?.detail || 
+                         error.response?.data?.message || 
+                         error.message || 
+                         'An unexpected error occurred';
     return Promise.reject(new Error(errorMessage));
   }
 );

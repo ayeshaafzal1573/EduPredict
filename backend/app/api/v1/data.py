@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from app.core.security import get_current_user, TokenData
-from app.core.hdfs_utils import HDFSClient
 from app.core.database import get_students_collection, get_courses_collection
 from motor.motor_asyncio import AsyncIOMotorCollection
 from loguru import logger
@@ -68,12 +67,10 @@ async def upload_data(
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid CSV format")
         
-        # Save to HDFS
-        hdfs_client = HDFSClient()
-        hdfs_path = f"/edupredict/uploads/{file.filename}"
-        hdfs_client.save_data(df.to_json().encode(), hdfs_path)
+        # Log successful upload
+        logger.info(f"Data uploaded successfully: {file.filename}")
         
-        return {"message": "Data uploaded successfully", "hdfs_path": hdfs_path}
+        return {"message": "Data uploaded successfully", "filename": file.filename}
     except HTTPException as e:
         raise e
     except Exception as e:

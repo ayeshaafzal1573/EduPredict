@@ -9,6 +9,7 @@ async def connect_to_mongo() -> bool:
     """Initialize MongoDB connection"""
     global client
     try:
+        logger.info(f"Connecting to MongoDB at {settings.MONGODB_URL}")
         client = AsyncIOMotorClient(
             settings.MONGODB_URL,
             maxPoolSize=10,
@@ -23,6 +24,7 @@ async def connect_to_mongo() -> bool:
         return True
     except Exception as e:
         logger.error(f"MongoDB connection failed: {e}")
+        logger.error("Please ensure MongoDB is running and accessible")
         return False
 
 async def close_mongo_connection() -> None:

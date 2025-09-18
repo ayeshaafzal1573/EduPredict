@@ -68,7 +68,10 @@ async def get_dashboard_stats(
         elif role == "teacher":
             # Get teacher's courses
             teacher_courses = await courses_collection.find({
-                "teacher_id": current_user.user_id
+                "$or": [
+                    {"teacher_id": current_user.user_id},
+                    {"teacher_id": str(current_user.user_id)}
+                ]
             }).to_list(length=None)
             
             # Count total students
@@ -95,7 +98,11 @@ async def get_dashboard_stats(
                 "atRiskStudents": max(0, int(total_students * 0.1)),
                 "averageAttendance": round(avg_attendance, 1),
                 "averageGPA": round(avg_gpa, 2),
-                "activeClasses": len(teacher_courses)
+                "activeClasses": len(teacher_courses),
+                "total_students": total_students,
+                "average_grade": f"{avg_gpa:.1f}",
+                "attendance_rate": round(avg_attendance, 1),
+                "at_risk_students": max(0, int(total_students * 0.1))
             }
             
         elif role == "admin":
@@ -283,7 +290,17 @@ async def get_performance_trends(
 ):
     """Get performance trends for a student"""
     try:
-        student = await students_collection.find_one({"student_id": student_id})
+        # Handle 'me' parameter
+        if student_id == "me":
+            student_id = current_user.user_id
+            
+        student = await students_collection.find_one({
+            "$or": [
+                {"student_id": student_id},
+                {"user_id": student_id}
+            ]
+        })
+        
         current_gpa = student.get("gpa", 3.2) if student else 3.2
         current_semester = student.get("current_semester", 5) if student else 5
         

@@ -45,6 +45,10 @@ export const AuthProvider = ({ children }) => {
       setLoading(true);
       const response = await authAPI.login(email, password);
 
+      if (!response.access_token) {
+        throw new Error('No access token received');
+      }
+
       localStorage.setItem('accessToken', response.access_token);
       
       const userData = await authAPI.getCurrentUser();
@@ -55,7 +59,7 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (error) {
       console.error('Login error:', error);
-      const errorMessage = error.message || 'Login failed';
+      const errorMessage = error.message || error.response?.data?.detail || 'Login failed';
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     } finally {

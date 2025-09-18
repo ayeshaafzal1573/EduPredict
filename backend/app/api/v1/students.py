@@ -80,9 +80,10 @@ async def get_student(
     try:
         # Try to find by student_id or user_id
         student = None
-        if student_id == current_user.user_id:
+        if student_id == current_user.user_id or student_id == "me":
             # Find by user_id
-            student = await students_collection.find_one({"user_id": student_id})
+            actual_user_id = current_user.user_id if student_id == "me" else student_id
+            student = await students_collection.find_one({"user_id": actual_user_id})
         else:
             # Find by student_id first, then by user_id
             student = await students_collection.find_one({"student_id": student_id})

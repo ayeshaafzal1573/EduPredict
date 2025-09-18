@@ -20,7 +20,7 @@ async def get_user_notifications(
         # Allow users to get their own notifications or use 'me'
         if user_id == "me":
             user_id = current_user.user_id
-        elif current_user.role not in ["admin"] and user_id != current_user.user_id:
+        elif current_user.role not in ["admin", "teacher"] and user_id != current_user.user_id:
             raise HTTPException(status_code=403, detail="Access denied")
         
         notifications = await notifications_collection.find({

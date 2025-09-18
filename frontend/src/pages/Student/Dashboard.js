@@ -22,8 +22,8 @@ const StudentDashboard = () => {
 
       const [stats, studentData, dropoutPrediction] = await Promise.all([
         analyticsAPI.getDashboardStats('student'),
-        studentsAPI.getStudentById(user.id),
-        analyticsAPI.getDropoutPrediction(user.id)
+        studentsAPI.getStudentById('me'),
+        analyticsAPI.getDropoutPrediction('me')
       ]);
 
       setDashboardData({

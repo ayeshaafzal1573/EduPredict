@@ -21,8 +21,8 @@ const StudentPredictions = () => {
 
       // Always fetch from APIs - no fallback data in frontend
       const [dropoutPrediction, gradePredictions] = await Promise.all([
-        analyticsAPI.getDropoutPrediction(user.id),
-        analyticsAPI.getGradePredictions(user.id)
+        analyticsAPI.getDropoutPrediction('me'),
+        analyticsAPI.getGradePredictions('me')
       ]);
 
       const processedPredictions = {
