@@ -245,24 +245,6 @@ export const analyticsAPI = {
   },
 };
 
-// -------------------- NOTIFICATIONS API --------------------
-export const notificationsAPI = {
-  getNotifications: async (params = {}) => {
-    const userId = params.user_id || 'me';
-    return handleApiCall(() => apiClient.get(`/notifications/${userId}`));
-  },
-  
-  createNotification: async (data) => {
-    return handleApiCall(() => apiClient.post('/notifications', data));
-  },
-  
-  markAsRead: async (id) => {
-    return handleApiCall(() => apiClient.put(`/notifications/${id}/read`));
-  },
-  
-  markAllAsRead: async () => {
-    return handleApiCall(() => apiClient.put('/notifications/read-all'));
-  },
-};
+
 
 export default apiClient;

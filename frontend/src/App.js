@@ -23,27 +23,21 @@ import StudentPerformance from './pages/Student/Performance';
 import StudentPredictions from './pages/Student/Predictions';
 import StudentAttendance from './pages/Student/Attendance';
 import StudentCourses from './pages/Student/Courses';
-import StudentNotifications from './pages/Student/Notifications';
 
 // Teacher Pages
 import TeacherClasses from './pages/Teacher/Classes';
 import TeacherGrades from './pages/Teacher/Grades';
 import TeacherAttendance from './pages/Teacher/Attendance';
-import TeacherAnalytics from './pages/Teacher/Analytics';
-import TeacherNotifications from './pages/Teacher/Notifications';
 
 // Admin Pages
 import AdminUsers from './pages/Admin/Users';
 import AdminCourses from './pages/Admin/Courses';
 import AdminAnalytics from './pages/Admin/Analytics';
-import AdminNotifications from './pages/Admin/Notifications';
 
 // Analyst Pages
 import AnalystModels from './pages/Analyst/Models';
 import AnalystReports from './pages/Analyst/Reports';
 import AnalystPredictions from './pages/Analyst/Predictions';
-import AnalystTableau from './pages/Analyst/Tableau';
-import AnalystNotifications from './pages/Analyst/Notifications';
 
 // Common Pages
 import Profile from './pages/Common/Profile';
@@ -201,14 +195,6 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="notifications"
-                  element={
-                    <ProtectedRoute allowedRoles={['student']}>
-                      <StudentNotifications />
-                    </ProtectedRoute>
-                  }
-                />
 
                 {/* Teacher Routes */}
                 <Route
@@ -235,22 +221,8 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="teacher-analytics"
-                  element={
-                    <ProtectedRoute allowedRoles={['teacher']}>
-                      <TeacherAnalytics />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="teacher-notifications"
-                  element={
-                    <ProtectedRoute allowedRoles={['teacher']}>
-                      <TeacherNotifications />
-                    </ProtectedRoute>
-                  }
-                />
+            
+             
 
                 {/* Admin Routes */}
                 <Route
@@ -277,14 +249,7 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="admin-notifications"
-                  element={
-                    <ProtectedRoute allowedRoles={['admin']}>
-                      <AdminNotifications />
-                    </ProtectedRoute>
-                  }
-                />
+              
 
                 {/* Analyst Routes */}
                 <Route
@@ -311,22 +276,7 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
-                <Route
-                  path="tableau"
-                  element={
-                    <ProtectedRoute allowedRoles={['analyst']}>
-                      <AnalystTableau />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="analyst-notifications"
-                  element={
-                    <ProtectedRoute allowedRoles={['analyst']}>
-                      <AnalystNotifications />
-                    </ProtectedRoute>
-                  }
-                />
+             
               </Route>
 
               {/* Error Routes */}

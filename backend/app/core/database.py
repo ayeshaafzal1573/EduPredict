@@ -64,7 +64,3 @@ async def get_attendance_collection() -> AsyncIOMotorCollection:
 async def get_grades_collection() -> AsyncIOMotorCollection:
     """Get grades collection"""
     return await get_collection("grades")
-
-async def get_notifications_collection() -> AsyncIOMotorCollection:
-    """Get notifications collection"""
-    return await get_collection("notifications")

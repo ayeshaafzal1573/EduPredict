@@ -180,9 +180,7 @@ const TeacherClasses = () => {
               >
                 View Students
               </button>
-              <button className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
-                Manage
-              </button>
+           
             </div>
           </div>
         ))}
@@ -224,9 +222,7 @@ const TeacherClasses = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Risk Level
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+              
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -258,13 +254,7 @@ const TeacherClasses = () => {
                         {student.riskLevel}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button className="text-blue-600 hover:text-blue-900">View</button>
-                        <button className="text-green-600 hover:text-green-900">Grade</button>
-                        <button className="text-yellow-600 hover:text-yellow-900">Alert</button>
-                      </div>
-                    </td>
+                  
                   </tr>
                 ))}
               </tbody>

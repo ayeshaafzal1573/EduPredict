@@ -214,38 +214,12 @@ const TeacherDashboard = () => {
       </div>
 
       {/* Charts and Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid ">
         <PerformanceChart
           title="📈 Class Performance Trends"
           type="line"
         />
 
-        {/* Recent Activities */}
-        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-          <h2 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
-            <svg className="w-6 h-6 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Recent Activities
-          </h2>
-
-          <div className="space-y-4">
-            {[
-              { action: 'Graded CS101 Assignment 3', time: '2 hours ago', type: 'grade', icon: '✏️' },
-              { action: 'Marked attendance for Math201', time: '4 hours ago', type: 'attendance', icon: '📋' },
-              { action: 'Sent alert to 3 at-risk students', time: '1 day ago', type: 'alert', icon: '⚠️' },
-              { action: 'Updated Physics101 syllabus', time: '2 days ago', type: 'update', icon: '📚' },
-            ].map((activity, index) => (
-              <div key={index} className="flex items-center space-x-4 p-3 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-100">
-                <div className="text-2xl">{activity.icon}</div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900">{activity.action}</p>
-                  <p className="text-xs text-gray-500">{activity.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
    

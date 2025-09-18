@@ -180,7 +180,6 @@ Manages application theme:
 ### Dashboard Components
 - **RiskAssessment**: AI-powered risk analysis display
 - **PerformanceChart**: Interactive performance visualizations
-- **NotificationCenter**: Real-time notification management
 
 ### Common Components
 - **LoadingSpinner**: Consistent loading states

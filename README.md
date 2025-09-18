@@ -24,7 +24,6 @@ EduPredict is a comprehensive educational analytics platform that leverages arti
 ### Backend
 - **FastAPI** - Modern Python web framework
 - **MongoDB** - Document database for transactional data
-- **Redis** - Caching and real-time notifications
 - **Hadoop/HDFS** - Big data storage and processing
 - **Scikit-learn** - Machine learning models
 - **Apache Impala** - SQL queries on big data
@@ -286,7 +285,6 @@ This project includes all required deliverables:
 - **Big Data Ready**: Hadoop/HDFS integration for scalable data processing
 - **Production Ready**: Docker containerization and comprehensive testing
 - **Role-based Security**: Secure authentication and authorization system
-- **Real-time Features**: Live notifications and real-time analytics
 - **Responsive Design**: Mobile-friendly interface with modern UI/UX
 
 ---

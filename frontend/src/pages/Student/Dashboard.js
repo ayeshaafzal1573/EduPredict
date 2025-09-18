@@ -19,12 +19,25 @@ const StudentDashboard = () => {
     try {
       setLoading(true);
       setError(null);
+      const normalizeStudentData = (data) => {
+        if (data.student_id === 'me' && user?.id) {
+          return { ...data, student_id: user.id };
+        }
+        return data;
+      };
 
       const [stats, studentData, dropoutPrediction] = await Promise.all([
         analyticsAPI.getDashboardStats('student'),
-        studentsAPI.getStudentById('me'),
-        analyticsAPI.getDropoutPrediction('me')
+        studentsAPI.getStudentById(user.id),
+        analyticsAPI.getDropoutPrediction(user.id)
       ]);
+
+      setDashboardData({
+        stats,
+        student: normalizeStudentData(studentData),
+        dropoutRisk: normalizeStudentData(dropoutPrediction)
+      });
+
 
       setDashboardData({
         stats,

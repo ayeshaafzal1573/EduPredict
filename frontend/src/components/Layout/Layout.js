@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
-import NotificationCenter from '../Notifications/NotificationCenter';
 
 const Layout = () => {
   const { user, logout } = useAuth();
@@ -19,10 +18,8 @@ const Layout = () => {
         return [
           ...baseItems,
           { name: 'Performance', href: '/performance', icon: '📊' },
-          { name: 'Predictions', href: '/predictions', icon: '🔮' },
           { name: 'Attendance', href: '/attendance', icon: '📅' },
           { name: 'Courses', href: '/student-courses', icon: '📚' },
-          { name: 'Notifications', href: '/notifications', icon: '🔔' },
         ];
       case 'teacher':
         return [
@@ -30,16 +27,12 @@ const Layout = () => {
           { name: 'Classes', href: '/classes', icon: '👥' },
           { name: 'Attendance', href: '/teacher-attendance', icon: '📋' },
           { name: 'Grades', href: '/grades', icon: '✏️' },
-          { name: 'Analytics', href: '/teacher-analytics', icon: '📈' },
-          { name: 'Notifications', href: '/teacher-notifications', icon: '🔔' },
         ];
       case 'admin':
         return [
           ...baseItems,
           { name: 'Users', href: '/users', icon: '👥' },
           { name: 'Courses', href: '/admin-courses', icon: '📚' },
-          { name: 'Analytics', href: '/admin-analytics', icon: '📊' },
-          { name: 'Notifications', href: '/admin-notifications', icon: '🔔' },
         ];
       case 'analyst':
         return [
@@ -47,8 +40,6 @@ const Layout = () => {
           { name: 'Models', href: '/models', icon: '🤖' },
           { name: 'Reports', href: '/reports', icon: '📈' },
           { name: 'Predictions', href: '/analyst-predictions', icon: '🔮' },
-          { name: 'Tableau', href: '/tableau', icon: '📊' },
-          { name: 'Notifications', href: '/analyst-notifications', icon: '🔔' },
         ];
       default:
         return baseItems;
@@ -112,7 +103,7 @@ const Layout = () => {
               </div>
 
               <div className="flex items-center space-x-4">
-                <NotificationCenter />
+              
                 <div className="flex items-center space-x-3">
                   <div className="text-right">
                     <div className="text-sm font-medium text-gray-900">
