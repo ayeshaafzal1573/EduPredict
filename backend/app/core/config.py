@@ -23,11 +23,15 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     DEBUG: bool = True
     
-    # Optional settings (disabled for now to avoid dependency issues)
+    # Optional settings (mock implementations for demo)
     HDFS_HOST: str = "localhost"
     HDFS_PORT: int = 9000
     HDFS_USER: str = "hdfs"
     REDIS_URL: str = "redis://localhost:6379/0"
+    TABLEAU_SERVER: str = "http://localhost:8000"
+    TABLEAU_USERNAME: str = "admin"
+    TABLEAU_PASSWORD: str = "password"
+    TABLEAU_SITE_NAME: str = "default"
     
     model_config = SettingsConfigDict(
         env_file=Path(__file__).parent.parent.parent / ".env",

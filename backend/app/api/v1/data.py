@@ -1,22 +1,30 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
-from app.services.student_service import StudentService, get_student_service
-from app.services.course_service import CourseService, get_course_service
+from app.core.security import get_current_user, TokenData
 from app.core.hdfs_utils import HDFSClient
+from app.core.database import get_students_collection, get_courses_collection
+from motor.motor_asyncio import AsyncIOMotorCollection
 from loguru import logger
 import pandas as pd
 import json
+from datetime import datetime
 
 router = APIRouter(prefix="/data", tags=["Data Ingestion"])
 
 @router.post("/upload", response_model=dict)
-async def upload_data(file: UploadFile = File(...), student_service: StudentService = Depends(get_student_service), course_service: CourseService = Depends(get_course_service)):
+async def upload_data(
+    file: UploadFile = File(...),
+    current_user: TokenData = Depends(get_current_user),
+    students_collection: AsyncIOMotorCollection = Depends(get_students_collection),
+    courses_collection: AsyncIOMotorCollection = Depends(get_courses_collection)
+):
     """
     Upload and process CSV data for students or courses
     
     Args:
         file: CSV file with student or course data
-        student_service: Student service dependency
-        course_service: Course service dependency
+        current_user: Current authenticated user
+        students_collection: Students database collection
+        courses_collection: Courses database collection
     
     Returns:
         Status of data ingestion
@@ -27,16 +35,36 @@ async def upload_data(file: UploadFile = File(...), student_service: StudentServ
     try:
         if not file.filename.endswith(".csv"):
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only CSV files are supported")
+        
         df = pd.read_csv(file.file)
-        # Assume CSV has columns matching StudentCreate or CourseCreate
+        
+        # Process student data
         if "student_id" in df.columns:
+            students_data = []
             for _, row in df.iterrows():
                 student_data = row.to_dict()
-                await student_service.create_student(StudentCreate(**student_data))
+                student_data["created_at"] = datetime.utcnow()
+                student_data["updated_at"] = datetime.utcnow()
+                student_data["is_active"] = True
+                students_data.append(student_data)
+            
+            if students_data:
+                await students_collection.insert_many(students_data)
+        
+        # Process course data
         elif "code" in df.columns:
+            courses_data = []
             for _, row in df.iterrows():
                 course_data = row.to_dict()
-                await course_service.create_course(CourseCreate(**course_data))
+                course_data["created_at"] = datetime.utcnow()
+                course_data["updated_at"] = datetime.utcnow()
+                course_data["is_active"] = True
+                course_data["students"] = []
+                course_data["student_count"] = 0
+                courses_data.append(course_data)
+            
+            if courses_data:
+                await courses_collection.insert_many(courses_data)
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid CSV format")
         
