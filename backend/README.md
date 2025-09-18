@@ -37,38 +37,44 @@ EduPredict is a comprehensive AI-powered student performance and dropout predict
 ### Installation
 
 1. **Clone the repository**
+
    ```bash
    git clone <repository-url>
    cd edupredict/backend
    ```
 
 2. **Create virtual environment**
+
    ```bash
    python -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install dependencies**
+
    ```bash
    pip install -r requirements.txt
    ```
 
 4. **Set up environment variables**
+
    ```bash
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
 5. **Start MongoDB**
+
    ```bash
    # Using Docker
    docker run -d --name mongodb -p 27017:27017 mongo:7.0
-   
+
    # Or start your local MongoDB service
    mongod
    ```
 
 6. **Initialize database with sample data**
+
    ```bash
    python seed_data.py
    ```
@@ -92,9 +98,9 @@ Authorization: Bearer <your-jwt-token>
 
 ### Demo Credentials
 
-| Role | Email | Password |
-|------|-------|----------|
-| Admin | admin@edupredict.com | admin123 |
+| Role    | Email                  | Password   |
+| ------- | ---------------------- | ---------- |
+| Admin   | admin@edupredict.com   | admin123   |
 | Teacher | teacher@edupredict.com | teacher123 |
 | Student | student@edupredict.com | student123 |
 | Analyst | analyst@edupredict.com | analyst123 |
@@ -102,23 +108,27 @@ Authorization: Bearer <your-jwt-token>
 ### Core Endpoints
 
 #### Authentication
+
 - `POST /api/v1/auth/login` - User login
 - `POST /api/v1/auth/register` - User registration
 - `GET /api/v1/auth/me` - Get current user info
 
 #### Students
+
 - `GET /api/v1/students` - List students
 - `GET /api/v1/students/{id}` - Get student details
 - `POST /api/v1/students` - Create student
 - `PUT /api/v1/students/{id}` - Update student
 
 #### Courses
+
 - `GET /api/v1/courses` - List courses
 - `GET /api/v1/courses/{id}` - Get course details
 - `POST /api/v1/courses` - Create course
 - `GET /api/v1/courses/{id}/students` - Get course students
 
 #### Analytics
+
 - `GET /api/v1/analytics/dropout-prediction/{student_id}` - Dropout prediction
 - `GET /api/v1/analytics/grade-predictions/{student_id}` - Grade predictions
 - `GET /api/v1/analytics/dashboard-stats/{role}` - Dashboard statistics
@@ -181,6 +191,7 @@ LOG_LEVEL=INFO
 ### Database Setup
 
 The system uses MongoDB with the following collections:
+
 - `users` - User accounts and authentication
 - `students` - Student profiles and academic data
 - `courses` - Course information and enrollment
@@ -191,12 +202,14 @@ The system uses MongoDB with the following collections:
 ## Machine Learning Models
 
 ### Dropout Prediction Model
+
 - **Algorithm**: Random Forest Classifier
 - **Accuracy**: 87.2%
 - **Features**: GPA, attendance, demographics, engagement
 - **Output**: Risk score, level, factors, recommendations
 
 ### Grade Prediction Model
+
 - **Algorithm**: Random Forest Regressor
 - **Accuracy**: 82.4%
 - **Features**: Previous performance, attendance, assignments
@@ -205,6 +218,7 @@ The system uses MongoDB with the following collections:
 ## Development
 
 ### Running Tests
+
 ```bash
 # Install test dependencies
 pip install pytest pytest-asyncio
@@ -214,6 +228,7 @@ pytest tests/
 ```
 
 ### Code Quality
+
 ```bash
 # Format code
 black app/
@@ -228,16 +243,19 @@ mypy app/
 ### Database Operations
 
 #### Seeding Data
+
 ```bash
 python seed_data.py
 ```
 
 #### Backup Database
+
 ```bash
 mongodump --db edupredict --out backup/
 ```
 
 #### Restore Database
+
 ```bash
 mongorestore --db edupredict backup/edupredict/
 ```
@@ -256,12 +274,14 @@ docker run -p 8000:8000 --env-file .env edupredict-backend
 ### Production Considerations
 
 1. **Security**
+
    - Use strong SECRET_KEY in production
    - Enable HTTPS
    - Implement rate limiting
    - Use environment-specific configurations
 
 2. **Database**
+
    - Use MongoDB Atlas or managed MongoDB
    - Implement proper indexing
    - Set up regular backups
@@ -276,6 +296,7 @@ docker run -p 8000:8000 --env-file .env edupredict-backend
 ## API Usage Examples
 
 ### Authentication
+
 ```python
 import requests
 
@@ -291,6 +312,7 @@ headers = {'Authorization': f'Bearer {token}'}
 ```
 
 ### Get Student Data
+
 ```python
 # Get current user's student data
 response = requests.get(
@@ -301,6 +323,7 @@ student_data = response.json()
 ```
 
 ### Get Predictions
+
 ```python
 # Get dropout prediction
 response = requests.get(
@@ -315,15 +338,18 @@ prediction = response.json()
 ### Common Issues
 
 1. **MongoDB Connection Error**
+
    - Ensure MongoDB is running: `mongod`
    - Check connection string in `.env`
    - Verify network connectivity
 
 2. **Import Errors**
+
    - Activate virtual environment: `source venv/bin/activate`
    - Install dependencies: `pip install -r requirements.txt`
 
 3. **Authentication Errors**
+
    - Check SECRET_KEY in `.env`
    - Verify token expiration settings
    - Ensure proper CORS configuration
@@ -352,6 +378,7 @@ logger.error("Database connection failed")
 ### Health Checks
 
 Monitor application health:
+
 - `GET /health` - Basic health check
 - `GET /` - API information
 
@@ -367,6 +394,7 @@ Monitor application health:
 ## Support
 
 For technical support:
+
 - Check the logs for error details
 - Review the API documentation at `/docs`
 - Refer to the troubleshooting section

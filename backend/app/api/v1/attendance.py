@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import traceback
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from app.core.security import get_current_user, TokenData
 from motor.motor_asyncio import AsyncIOMotorCollection
 from app.core.database import get_attendance_collection, get_students_collection, get_courses_collection
@@ -65,26 +66,38 @@ async def get_attendance_records(
 
 @router.post("/bulk")
 async def create_bulk_attendance(
-    bulk_data: dict,
+    bulk_data: dict = Body(...),
     current_user: TokenData = Depends(get_current_user),
     attendance_collection: AsyncIOMotorCollection = Depends(get_attendance_collection)
 ):
-    """Create attendance records in bulk"""
     try:
+        print("Received bulk data:", bulk_data)  # Debug log
+
+        # Extract data from request
         course_id = bulk_data.get("course_id")
         attendance_date = bulk_data.get("date")
-        records = bulk_data.get("attendance_records", [])
-        
+        records = bulk_data.get("attendance_records", [])  # ✅ define records here
+
         if not course_id or not attendance_date or not records:
             raise HTTPException(status_code=400, detail="Missing required fields")
-        
-        # Parse date
+
+        # Ensure attendance_date is a datetime (MongoDB can store it)
         if isinstance(attendance_date, str):
-            attendance_date = datetime.strptime(attendance_date, "%Y-%m-%d").date()
-        
-        # Prepare attendance records
+            attendance_date = datetime.strptime(attendance_date, "%Y-%m-%d")
+        elif isinstance(attendance_date, date):
+            attendance_date = datetime.combine(attendance_date, datetime.min.time())
+
+        # Delete existing records for this course and date
+        await attendance_collection.delete_many({
+            "course_id": course_id,
+            "date": attendance_date
+        })
+
+        # Prepare documents to insert
         attendance_docs = []
         for record in records:
+            if not record.get("student_id"):
+                continue
             doc = {
                 "student_id": record.get("student_id"),
                 "course_id": course_id,
@@ -96,23 +109,16 @@ async def create_bulk_attendance(
                 "updated_at": datetime.utcnow()
             }
             attendance_docs.append(doc)
-        
-        # Delete existing records for this date and course
-        await attendance_collection.delete_many({
-            "course_id": course_id,
-            "date": attendance_date
-        })
-        
+
         # Insert new records
         if attendance_docs:
             await attendance_collection.insert_many(attendance_docs)
-        
+
         return {"message": f"Bulk attendance created successfully for {len(attendance_docs)} students"}
-        
-    except HTTPException:
-        raise
+
     except Exception as e:
-        logger.error(f"Error creating bulk attendance: {e}")
+        print("Error creating bulk attendance:", e)
+        import traceback; traceback.print_exc()
         raise HTTPException(status_code=500, detail="Failed to create bulk attendance")
 
 @router.post("/")

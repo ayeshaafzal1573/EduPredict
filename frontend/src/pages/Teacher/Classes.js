@@ -273,26 +273,7 @@ const TeacherClasses = () => {
         </div>
       )}
 
-      {/* Quick Actions */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { name: 'Mark Attendance', icon: '📋', color: 'from-blue-500 to-blue-600' },
-            { name: 'Enter Grades', icon: '✏️', color: 'from-green-500 to-green-600' },
-            { name: 'Send Announcements', icon: '📢', color: 'from-purple-500 to-purple-600' },
-            { name: 'Generate Reports', icon: '📊', color: 'from-orange-500 to-orange-600' },
-          ].map((action, index) => (
-            <button
-              key={index}
-              className={`p-4 bg-gradient-to-r ${action.color} text-white rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105`}
-            >
-              <div className="text-2xl mb-2">{action.icon}</div>
-              <div className="text-sm font-medium">{action.name}</div>
-            </button>
-          ))}
-        </div>
-      </div>
+    
 
       {/* Class Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

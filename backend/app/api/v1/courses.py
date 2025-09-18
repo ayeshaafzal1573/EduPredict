@@ -18,43 +18,36 @@ async def get_all_courses(
     courses_collection: AsyncIOMotorCollection = Depends(get_courses_collection),
     students_collection: AsyncIOMotorCollection = Depends(get_students_collection)
 ):
-    """Retrieve courses with optional filters"""
     try:
         query = {}
         
         if teacher_id:
             query["teacher_id"] = teacher_id
         elif student_id:
+            if student_id == "me":
+                student_doc = await students_collection.find_one({"user_id": current_user.user_id})
+                if not student_doc:
+                    return []
+                student_id = student_doc["student_id"]
             query["students"] = {"$in": [student_id]}
         
         courses = await courses_collection.find(query).to_list(length=None)
         result = []
         for course in courses:
-            course_data = {
+            result.append({
                 "id": str(course["_id"]),
-                "_id": str(course["_id"]),
                 "name": course.get("name", ""),
                 "code": course.get("code", ""),
                 "description": course.get("description", ""),
-                "department": course.get("department", ""),
                 "credits": course.get("credits", 3),
-                "semester": course.get("semester", ""),
-                "academic_year": course.get("academic_year", ""),
-                "schedule": course.get("schedule", ""),
-                "room": course.get("room", ""),
-                "max_students": course.get("max_students", 30),
-                "teacher_id": course.get("teacher_id", ""),
                 "teacher_name": course.get("teacher_name", ""),
                 "students": course.get("students", []),
                 "student_count": len(course.get("students", [])),
                 "is_active": course.get("is_active", True),
-                "created_at": course.get("created_at"),
-                "updated_at": course.get("updated_at")
-            }
-            result.append(course_data)
+            })
         
         return result
-        
+
     except Exception as e:
         logger.error(f"Error getting courses: {e}")
         return []
@@ -62,59 +55,78 @@ async def get_all_courses(
 @router.get("/{course_id}/students")
 async def get_course_students(
     course_id: str,
+    student_id: str = None,  # optional, could be "me"
     current_user: TokenData = Depends(get_current_user),
     courses_collection: AsyncIOMotorCollection = Depends(get_courses_collection),
     students_collection: AsyncIOMotorCollection = Depends(get_students_collection),
     users_collection: AsyncIOMotorCollection = Depends(get_users_collection)
 ):
-    """Get students enrolled in a course"""
+    """
+    Get students enrolled in a course.
+    Optionally filter for a specific student ("me" resolves to current user).
+    """
     try:
-        # Find course by ID or code
-        course = await courses_collection.find_one({
-            "$or": [
-                {"_id": ObjectId(course_id) if ObjectId.is_valid(course_id) else None},
-                {"code": course_id}
-            ]
-        })
+        # Find course by _id or code
+        or_conditions = []
+        if ObjectId.is_valid(course_id):
+            or_conditions.append({"_id": ObjectId(course_id)})
+        or_conditions.append({"code": course_id})
         
-        if not course:
+        course = await courses_collection.find_one({"$or": or_conditions})
+        if not course or "students" not in course or not course["students"]:
             return []
-        
-        enrolled_student_ids = course.get("students", [])
+
+        # If student_id="me", resolve to the logged-in student's ID
+        if student_id == "me":
+            student_doc = await students_collection.find_one({"user_id": current_user.user_id})
+            if not student_doc:
+                return []
+            student_id = student_doc["student_id"]
+
+        # Filter students if student_id is provided
+        enrolled_student_ids = course["students"]
+        if student_id:
+            if student_id not in enrolled_student_ids:
+                return []  # student not enrolled
+            enrolled_student_ids = [student_id]
+
+        # Convert to ObjectIds if needed
+        student_object_ids = [ObjectId(sid) for sid in enrolled_student_ids if ObjectId.is_valid(sid)]
+
+        # Fetch student user info
         students = []
-        
-        for student_id in enrolled_student_ids:
-            student = await students_collection.find_one({"student_id": student_id})
-            if student:
-                user = await users_collection.find_one({"_id": ObjectId(student["user_id"])})
-                if user:
-                    students.append({
-                        "id": student_id,
-                        "student_id": student_id,
-                        "name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
-                        "email": user.get("email", ""),
-                        "attendance": 85,
-                        "gpa": student.get("gpa", 0.0),
-                        "risk_level": "low" if student.get("gpa", 0.0) > 2.5 else "high"
-                    })
-        
+        cursor = users_collection.find({"_id": {"$in": student_object_ids}, "role": "student"})
+        async for user in cursor:
+            students.append({
+                "id": str(user["_id"]),
+                "student_id": str(user["_id"]),
+                "first_name": user.get("first_name", ""),
+                "last_name": user.get("last_name", ""),
+                "name": f"{user.get('first_name', '')} {user.get('last_name', '')}".strip(),
+                "email": user.get("email", ""),
+                "is_active": user.get("is_active", True)
+            })
+
         return students
-        
+
     except Exception as e:
+        logger.error(f"Error fetching enrolled students: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch students")
+
+      
         logger.error(f"Error getting course students: {e}")
         return []
-
 @router.post("/{course_id}/enroll/{student_id}")
 async def enroll_student(
     course_id: str,
     student_id: str,
     current_user: TokenData = Depends(get_current_user),
     courses_collection: AsyncIOMotorCollection = Depends(get_courses_collection),
-    students_collection: AsyncIOMotorCollection = Depends(get_students_collection)
+    users_collection: AsyncIOMotorCollection = Depends(get_users_collection)  # users table
 ):
     """Enroll a student in a course"""
     try:
-        # Check if course exists
+        # --- Find the course ---
         course = await courses_collection.find_one({
             "$or": [
                 {"_id": ObjectId(course_id) if ObjectId.is_valid(course_id) else None},
@@ -123,23 +135,24 @@ async def enroll_student(
         })
         if not course:
             raise HTTPException(status_code=404, detail="Course not found")
-        
-        # Check if student exists
-        student = await students_collection.find_one({"student_id": student_id})
+
+        # --- Find the student in users table ---
+        query_student_id = ObjectId(student_id) if ObjectId.is_valid(student_id) else student_id
+        student = await users_collection.find_one({"_id": query_student_id, "role": "student"})
         if not student:
             raise HTTPException(status_code=404, detail="Student not found")
-        
+
+        # --- Enroll the student ---
         await courses_collection.update_one(
             {"_id": course["_id"]},
             {
-                "$addToSet": {"students": student_id}, 
+                "$addToSet": {"students": student_id},
                 "$set": {"updated_at": datetime.utcnow()}
             }
         )
 
-        
         return {"message": "Student enrolled successfully"}
-        
+
     except HTTPException:
         raise
     except Exception as e:

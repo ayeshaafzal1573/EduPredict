@@ -280,20 +280,20 @@ const AdminCourses = () => {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <button 
-                      onClick={() => handleOpenEnrollModal(course)} 
+                    <button
+                      onClick={() => handleOpenEnrollModal(course)}
                       className="text-purple-600 hover:text-purple-900 mr-4"
                     >
                       Students
                     </button>
-                    <button 
-                      onClick={() => handleEditCourse(course)} 
+                    <button
+                      onClick={() => handleEditCourse(course)}
                       className="text-blue-600 hover:text-blue-900 mr-4"
                     >
                       Edit
                     </button>
-                    <button 
-                      onClick={() => handleDeleteCourse(course.id)} 
+                    <button
+                      onClick={() => handleDeleteCourse(course.id)}
                       className="text-red-600 hover:text-red-900"
                     >
                       Delete
@@ -315,61 +315,61 @@ const AdminCourses = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Course Name *</label>
-                  <input 
-                    type="text" 
-                    name="name" 
-                    placeholder="Course Name" 
-                    value={formData.name} 
-                    onChange={handleInputChange} 
-                    required 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  <input
+                    type="text"
+                    name="name"
+                    placeholder="Course Name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Course Code *</label>
-                  <input 
-                    type="text" 
-                    name="code" 
-                    placeholder="Course Code" 
-                    value={formData.code} 
-                    onChange={handleInputChange} 
-                    required 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  <input
+                    type="text"
+                    name="code"
+                    placeholder="Course Code"
+                    value={formData.code}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea 
-                  name="description" 
-                  placeholder="Course Description" 
-                  value={formData.description} 
-                  onChange={handleInputChange} 
+                <textarea
+                  name="description"
+                  placeholder="Course Description"
+                  value={formData.description}
+                  onChange={handleInputChange}
                   rows="3"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                <input 
-                  type="text" 
-                  name="department" 
-                  placeholder="Department" 
-                  value={formData.department} 
-                  onChange={handleInputChange} 
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                <input
+                  type="text"
+                  name="department"
+                  placeholder="Department"
+                  value={formData.department}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Teacher *</label>
-                <select 
-                  name="teacher_id" 
-                  value={formData.teacher_id} 
-                  onChange={handleInputChange} 
-                  required 
+                <select
+                  name="teacher_id"
+                  value={formData.teacher_id}
+                  onChange={handleInputChange}
+                  required
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Teacher</option>
@@ -384,10 +384,10 @@ const AdminCourses = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
-                  <select 
-                    name="semester" 
-                    value={formData.semester} 
-                    onChange={handleInputChange} 
+                  <select
+                    name="semester"
+                    value={formData.semester}
+                    onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="Fall 2024">Fall 2024</option>
@@ -397,38 +397,38 @@ const AdminCourses = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Academic Year</label>
-                  <input 
-                    type="text" 
-                    name="academic_year" 
-                    value={formData.academic_year} 
-                    onChange={handleInputChange} 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  <input
+                    type="text"
+                    name="academic_year"
+                    value={formData.academic_year}
+                    onChange={handleInputChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Credits</label>
-                  <input 
-                    type="number" 
-                    name="credits" 
-                    value={formData.credits} 
-                    onChange={handleInputChange} 
-                    min="1" 
-                    max="6" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  <input
+                    type="number"
+                    name="credits"
+                    value={formData.credits}
+                    onChange={handleInputChange}
+                    min="1"
+                    max="6"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Max Students</label>
-                  <input 
-                    type="number" 
-                    name="max_students" 
-                    value={formData.max_students} 
-                    onChange={handleInputChange} 
-                    min="1" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  <input
+                    type="number"
+                    name="max_students"
+                    value={formData.max_students}
+                    onChange={handleInputChange}
+                    min="1"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
@@ -436,38 +436,38 @@ const AdminCourses = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label>
-                  <input 
-                    type="text" 
-                    name="schedule" 
-                    value={formData.schedule} 
-                    onChange={handleInputChange} 
-                    placeholder="e.g., MWF 10:00-11:00" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  <input
+                    type="text"
+                    name="schedule"
+                    value={formData.schedule}
+                    onChange={handleInputChange}
+                    placeholder="e.g., MWF 10:00-11:00"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Room</label>
-                  <input 
-                    type="text" 
-                    name="room" 
-                    value={formData.room} 
-                    onChange={handleInputChange} 
-                    placeholder="Room Number" 
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                  <input
+                    type="text"
+                    name="room"
+                    value={formData.room}
+                    onChange={handleInputChange}
+                    placeholder="Room Number"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
               </div>
 
               <div className="flex justify-end gap-2 mt-6">
-                <button 
-                  type="button" 
-                  onClick={() => { setShowModal(false); resetForm(); }} 
+                <button
+                  type="button"
+                  onClick={() => { setShowModal(false); resetForm(); }}
                   className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
                 >
                   Cancel
                 </button>
-                <button 
-                  type="submit" 
+                <button
+                  type="submit"
                   className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
                 >
                   {selectedCourse ? 'Update' : 'Create'}
@@ -487,21 +487,22 @@ const AdminCourses = () => {
             <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">Enroll New Student</label>
               <div className="flex gap-2">
-                <select 
-                  value={selectedStudentId} 
-                  onChange={(e) => setSelectedStudentId(e.target.value)} 
+                <select
+                  value={selectedStudentId}
+                  onChange={(e) => setSelectedStudentId(e.target.value)}
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select Student to Enroll</option>
-                  {allStudents.filter(s => !enrolledStudents.some(e => e.student_id === s.id || e.id === s.id)).map(s => (
-                    <option key={s.student_id} value={s.student_id}>
+                  {allStudents.filter(s => !enrolledStudents.some(e => e.id === s.id)).map(s => (
+                    <option key={s.id} value={s.id}>
                       {s.first_name} {s.last_name}
                     </option>
 
+
                   ))}
                 </select>
-                <button 
-                  onClick={handleEnrollStudent} 
+                <button
+                  onClick={handleEnrollStudent}
                   disabled={!selectedStudentId}
                   className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50"
                 >
@@ -514,19 +515,20 @@ const AdminCourses = () => {
               <h3 className="text-lg font-semibold mb-4">Enrolled Students ({enrolledStudents.length})</h3>
               <div className="space-y-2 max-h-60 overflow-y-auto">
                 {enrolledStudents.map(s => (
-                  <div key={s.student_id} className="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
+                  <div key={s.id} className="flex justify-between items-center p-3 border border-gray-200 rounded-lg">
                     <div>
-                      <div className="font-medium text-gray-900">{s.name}</div>
+                      <div className="font-medium text-gray-900">{s.first_name} {s.last_name}</div>
                       <div className="text-sm text-gray-500">{s.email}</div>
                     </div>
-                    <button 
-                      onClick={() => handleUnenrollStudent(s.student_id)} 
+                    <button
+                      onClick={() => handleUnenrollStudent(s.id)}
                       className="px-3 py-1 bg-red-500 text-white rounded-lg text-sm hover:bg-red-600"
                     >
                       Unenroll
                     </button>
                   </div>
                 ))}
+
                 {enrolledStudents.length === 0 && (
                   <p className="text-gray-500 text-center py-4">No students enrolled</p>
                 )}
@@ -534,8 +536,8 @@ const AdminCourses = () => {
             </div>
 
             <div className="flex justify-end mt-6">
-              <button 
-                onClick={() => setShowEnrollModal(false)} 
+              <button
+                onClick={() => setShowEnrollModal(false)}
                 className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
               >
                 Close
