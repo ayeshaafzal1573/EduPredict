@@ -19,12 +19,11 @@ async def get_attendance_records(
     attendance_collection: AsyncIOMotorCollection = Depends(get_attendance_collection),
     students_collection: AsyncIOMotorCollection = Depends(get_students_collection)
 ):
-    """Get attendance records with filters"""
     try:
         query = {}
-        
+
+        # Resolve student_id
         if student_id:
-            # Handle 'me' parameter
             if student_id == "me":
                 student = await students_collection.find_one({"user_id": current_user.user_id})
                 if student:
@@ -33,35 +32,39 @@ async def get_attendance_records(
                     return []
             else:
                 query["student_id"] = student_id
+
+        # Filter by course
         if course_id:
             query["course_id"] = course_id
+
+        # Filter by date
         if date_from:
-            query["date"] = {"$gte": date_from}
+            query["date"] = {"$gte": datetime.fromisoformat(date_from)}
         if date_to:
             if "date" in query:
-                query["date"]["$lte"] = date_to
+                query["date"]["$lte"] = datetime.fromisoformat(date_to)
             else:
-                query["date"] = {"$lte": date_to}
-        
+                query["date"] = {"$lte": datetime.fromisoformat(date_to)}
+
+        # Fetch from Mongo
         records = await attendance_collection.find(query).limit(limit).to_list(length=limit)
-        
-        result = []
-        for record in records:
-            result.append({
-                "id": str(record["_id"]),
-                "student_id": record.get("student_id"),
-                "course_id": record.get("course_id"),
-                "date": record.get("date"),
-                "status": record.get("status"),
-                "marked_by": record.get("marked_by"),
-                "created_at": record.get("created_at"),
-                "updated_at": record.get("updated_at")
-            })
-        
+
+        # Format result
+        result = [{
+            "id": str(r["_id"]),
+            "student_id": r.get("student_id"),
+            "course_id": r.get("course_id"),
+            "date": r.get("date"),
+            "status": r.get("status"),
+            "marked_by": r.get("marked_by"),
+            "created_at": r.get("created_at"),
+            "updated_at": r.get("updated_at")
+        } for r in records]
+
         return result
-        
+
     except Exception as e:
-        logger.error(f"Error getting attendance records: {e}")
+        logger.error(f"Error fetching attendance: {e}")
         return []
 
 @router.post("/bulk")

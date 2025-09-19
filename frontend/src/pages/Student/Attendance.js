@@ -19,18 +19,19 @@ const StudentAttendance = () => {
       setLoading(true);
       setError(null);
 
-      // Always fetch from APIs - no fallback data in frontend
       const [attendanceRecords, studentCourses] = await Promise.all([
-        attendanceAPI.getAttendance({ student_id: 'me', limit: 200 }),
-        coursesAPI.getCourses({ student_id: 'me' })
+        attendanceAPI.getAttendance({ student_id: user.id, limit: 200 }),
+        coursesAPI.getCourses({ student_id: user.id }),
       ]);
 
-      // Process attendance data by course
+      // Convert date strings to Date objects
+      attendanceRecords.forEach(r => r.date = new Date(r.date));
+
       const courseAttendance = {};
       let totalClasses = 0;
       let totalAttended = 0;
 
-      // Initialize course data
+      // Initialize courses
       studentCourses.forEach(course => {
         courseAttendance[course.id] = {
           id: course.id,
@@ -38,24 +39,23 @@ const StudentAttendance = () => {
           totalClasses: 0,
           attended: 0,
           percentage: 0,
-          status: 'good',
+          status: "good",
           recentClasses: []
         };
       });
 
-      // Process attendance records
+      // Populate attendance
       attendanceRecords.forEach(record => {
         const courseId = record.course_id;
         if (courseAttendance[courseId]) {
           courseAttendance[courseId].totalClasses++;
           totalClasses++;
 
-          if (record.status === 'present') {
+          if (record.status === "present") {
             courseAttendance[courseId].attended++;
             totalAttended++;
           }
 
-          // Add to recent classes (keep last 5)
           courseAttendance[courseId].recentClasses.push({
             date: record.date,
             status: record.status
@@ -63,40 +63,30 @@ const StudentAttendance = () => {
         }
       });
 
-      // Calculate percentages and determine status
+      // Calculate percentages & status
       Object.values(courseAttendance).forEach(course => {
         if (course.totalClasses > 0) {
           course.percentage = Math.round((course.attended / course.totalClasses) * 100);
           course.status = determineAttendanceStatus(course.percentage);
-
-          // Sort recent classes by date and keep last 5
-          course.recentClasses = course.recentClasses
-            .sort((a, b) => new Date(b.date) - new Date(a.date))
-            .slice(0, 5);
+          course.recentClasses.sort((a, b) => b.date - a.date).slice(0, 5);
         }
       });
 
       const overallPercentage = totalClasses > 0 ? Math.round((totalAttended / totalClasses) * 100) : 0;
 
-      const processedData = {
-        overall: {
-          totalClasses,
-          attended: totalAttended,
-          percentage: overallPercentage,
-          trend: calculateTrend(attendanceRecords) // This would calculate recent trend
-        },
-        courses: Object.values(courseAttendance).filter(course => course.totalClasses > 0)
-      };
+      setAttendanceData({
+        overall: { totalClasses, attended: totalAttended, percentage: overallPercentage },
+        courses: Object.values(courseAttendance).filter(c => c.totalClasses > 0)
+      });
 
-      setAttendanceData(processedData);
     } catch (err) {
-      console.error('Error fetching attendance data:', err);
-      setError('Failed to load attendance data. Please try again.');
-      toast.error('Failed to load attendance data');
+      console.error("Error fetching attendance:", err);
+      setError("Failed to load attendance data");
     } finally {
       setLoading(false);
     }
   };
+
 
   const determineAttendanceStatus = (percentage) => {
     if (percentage >= 90) return 'excellent';
@@ -105,24 +95,7 @@ const StudentAttendance = () => {
     return 'critical';
   };
 
-  const calculateTrend = (records) => {
-    // Simple trend calculation - compare last 2 weeks vs previous 2 weeks
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
-    const fourWeeksAgo = new Date();
-    fourWeeksAgo.setDate(fourWeeksAgo.getDate() - 28);
-
-    const recentRecords = records.filter(r => new Date(r.date) >= twoWeeksAgo);
-    const olderRecords = records.filter(r => new Date(r.date) >= fourWeeksAgo && new Date(r.date) < twoWeeksAgo);
-
-    const recentRate = recentRecords.length > 0 ?
-      (recentRecords.filter(r => r.status === 'present').length / recentRecords.length) * 100 : 0;
-    const olderRate = olderRecords.length > 0 ?
-      (olderRecords.filter(r => r.status === 'present').length / olderRecords.length) * 100 : 0;
-
-    const diff = recentRate - olderRate;
-    return diff > 0 ? `+${diff.toFixed(0)}%` : `${diff.toFixed(0)}%`;
-  };
+ 
 
   if (loading) {
     return (
@@ -327,16 +300,7 @@ const StudentAttendance = () => {
         </div>
       </div>
 
-      {/* Attendance Calendar */}
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">
-        <h2 className="text-xl font-bold text-gray-800 mb-6">Attendance Calendar</h2>
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
-          <p className="text-center text-gray-600 mb-4">📅 Calendar view coming soon</p>
-          <p className="text-center text-sm text-gray-500">
-            Interactive calendar to view daily attendance across all courses
-          </p>
-        </div>
-      </div>
+ 
 
       {/* Attendance Insights */}
       <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-6 shadow-xl border border-white/20">

@@ -7,14 +7,14 @@ Seeds the MongoDB database with sample data for testing and demonstration
 import asyncio
 import sys
 import os
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, UTC
 from loguru import logger
 import random
 
 # Add the current directory to Python path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from app.core.database import connect_to_mongo, get_users_collection, get_students_collection, get_courses_collection, get_grades_collection, get_attendance_collection, get_notifications_collection
+from app.core.database import connect_to_mongo, get_users_collection, get_students_collection, get_courses_collection, get_grades_collection, get_attendance_collection, close_mongo_connection
 from app.core.security import get_password_hash
 
 async def seed_users():
@@ -33,8 +33,8 @@ async def seed_users():
                 "role": "admin",
                 "hashed_password": get_password_hash("admin123"),
                 "is_active": True,
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC)
             },
             {
                 "email": "teacher@edupredict.com",
@@ -43,8 +43,8 @@ async def seed_users():
                 "role": "teacher",
                 "hashed_password": get_password_hash("teacher123"),
                 "is_active": True,
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC)
             },
             {
                 "email": "student@edupredict.com",
@@ -53,8 +53,8 @@ async def seed_users():
                 "role": "student",
                 "hashed_password": get_password_hash("student123"),
                 "is_active": True,
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC)
             },
             {
                 "email": "analyst@edupredict.com",
@@ -63,8 +63,8 @@ async def seed_users():
                 "role": "analyst",
                 "hashed_password": get_password_hash("analyst123"),
                 "is_active": True,
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC)
             }
         ]
         
@@ -79,8 +79,8 @@ async def seed_users():
                 "role": "student",
                 "hashed_password": get_password_hash("student123"),
                 "is_active": True,
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC)
             })
         
         result = await collection.insert_many(users)
@@ -108,25 +108,29 @@ async def seed_students(user_ids):
         programs = ["Bachelor of Science", "Bachelor of Engineering", "Bachelor of Arts"]
         
         for i, user in enumerate(student_users):
+            # Generate valid random dates (avoid invalid days like Feb 30)
+            year = 2000 + random.randint(1, 4)
+            month = random.randint(1, 12)
+            day = random.randint(1, 28)  # Safe max day to avoid invalid dates
             dept = random.choice(departments)
             program = random.choice(programs)
             
             student = {
                 "student_id": f"STU-{str(i+1).zfill(3)}",
                 "user_id": str(user["_id"]),
-                "date_of_birth": date(2000 + random.randint(1, 4), random.randint(1, 12), random.randint(1, 28)),
+                "date_of_birth": datetime(year, month, day),  # Convert to datetime
                 "gender": random.choice(["male", "female"]),
                 "department": dept,
                 "program": program,
-                "enrollment_date": date(2020 + random.randint(0, 3), 9, 1),
-                "expected_graduation": date(2024 + random.randint(0, 2), 5, 15),
+                "enrollment_date": datetime(2020 + random.randint(0, 3), 9, 1),  # Convert to datetime
+                "expected_graduation": datetime(2024 + random.randint(0, 2), 5, 15),  # Convert to datetime
                 "current_semester": random.randint(1, 8),
                 "current_year": random.randint(1, 4),
                 "gpa": round(random.uniform(1.8, 3.9), 2),
                 "total_credits": random.randint(30, 120),
                 "is_active": True,
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC)
             }
             students.append(student)
         
@@ -224,8 +228,8 @@ async def seed_courses(user_ids):
                 "students": [],
                 "student_count": 0,
                 "is_active": True,
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow()
+                "created_at": datetime.now(UTC),
+                "updated_at": datetime.now(UTC)
             }
             courses.append(course)
         
@@ -306,8 +310,8 @@ async def seed_grades(students, courses):
                         "weight": 1.0,
                         "notes": "",
                         "graded_by": course.get("teacher_id", "system"),
-                        "created_at": datetime.utcnow() - timedelta(days=random.randint(1, 90)),
-                        "updated_at": datetime.utcnow()
+                        "created_at": datetime.now(UTC) - timedelta(days=random.randint(1, 90)),
+                        "updated_at": datetime.now(UTC)
                     }
                     grades.append(grade)
         
@@ -338,7 +342,7 @@ async def seed_attendance(students, courses):
                 continue
                 
             for student in students:
-                # Student attends 3-5 courses per day
+                # Student attends 2-4 courses per day
                 student_courses = random.sample(courses, random.randint(2, 4))
                 
                 for course in student_courses:
@@ -352,12 +356,12 @@ async def seed_attendance(students, courses):
                     record = {
                         "student_id": student["student_id"],
                         "course_id": course["code"],
-                        "date": attendance_date,
+                        "date": datetime(attendance_date.year, attendance_date.month, attendance_date.day),  # Convert to datetime
                         "status": status,
                         "notes": "",
                         "marked_by": course.get("teacher_id", "system"),
-                        "created_at": datetime.utcnow(),
-                        "updated_at": datetime.utcnow()
+                        "created_at": datetime.now(UTC),
+                        "updated_at": datetime.now(UTC)
                     }
                     attendance_records.append(record)
         
@@ -369,61 +373,6 @@ async def seed_attendance(students, courses):
         logger.error(f"❌ Failed to seed attendance: {e}")
         raise
 
-async def seed_notifications(user_ids):
-    """Seed notification data"""
-    try:
-        collection = await get_notifications_collection()
-        users_collection = await get_users_collection()
-        
-        # Clear existing notifications
-        await collection.delete_many({})
-        
-        # Get all users
-        all_users = await users_collection.find({}).to_list(length=None)
-        
-        notifications = []
-        notification_templates = {
-            "student": [
-                {"title": "Welcome to EduPredict", "message": "Welcome to the EduPredict system! Explore your dashboard to see your academic progress.", "type": "info"},
-                {"title": "Grade Updated", "message": "Your grade for Computer Science 101 has been updated.", "type": "grade"},
-                {"title": "Low Attendance Alert", "message": "Your attendance in Mathematics 201 is below 75%. Please attend upcoming classes.", "type": "attendance"},
-                {"title": "Assignment Due", "message": "Your Physics 101 assignment is due tomorrow.", "type": "reminder"}
-            ],
-            "teacher": [
-                {"title": "Welcome Teacher", "message": "Welcome to EduPredict! You can now manage your classes and track student progress.", "type": "info"},
-                {"title": "Student Alert", "message": "Student John Doe in CS-101 has been flagged as at-risk.", "type": "student_alert"},
-                {"title": "Grade Submission Reminder", "message": "Please submit grades for midterm exams by Friday.", "type": "reminder"}
-            ],
-            "admin": [
-                {"title": "System Status", "message": "EduPredict system is running smoothly. All services operational.", "type": "system"},
-                {"title": "Monthly Report", "message": "Monthly analytics report is ready for review.", "type": "info"}
-            ],
-            "analyst": [
-                {"title": "Model Training Complete", "message": "Dropout prediction model has been retrained with 95% accuracy.", "type": "model"},
-                {"title": "Data Processing", "message": "Daily data processing completed successfully.", "type": "system"}
-            ]
-        }
-        
-        for user in all_users:
-            user_notifications = notification_templates.get(user["role"], [])
-            for template in user_notifications:
-                notification = {
-                    "user_id": str(user["_id"]),
-                    "title": template["title"],
-                    "message": template["message"],
-                    "type": template["type"],
-                    "is_read": random.choice([True, False]),
-                    "created_at": datetime.utcnow() - timedelta(hours=random.randint(1, 72))
-                }
-                notifications.append(notification)
-        
-        if notifications:
-            result = await collection.insert_many(notifications)
-            logger.info(f"✅ Seeded {len(result.inserted_ids)} notifications")
-        
-    except Exception as e:
-        logger.error(f"❌ Failed to seed notifications: {e}")
-        raise
 
 def calculate_letter_grade(percentage):
     """Convert percentage to letter grade"""
@@ -475,7 +424,6 @@ async def main():
         await seed_enrollments(students, courses)
         await seed_grades(students, courses)
         await seed_attendance(students, courses)
-        await seed_notifications(user_ids)
         
         logger.info("🎉 Database seeding completed successfully!")
         logger.info("📋 Sample login credentials:")
@@ -487,6 +435,8 @@ async def main():
     except Exception as e:
         logger.error(f"❌ Seeding failed: {e}")
         sys.exit(1)
+    finally:
+        await close_mongo_connection()
 
 if __name__ == "__main__":
     asyncio.run(main())

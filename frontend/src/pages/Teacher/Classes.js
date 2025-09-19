@@ -19,8 +19,8 @@ const TeacherClasses = () => {
       setLoading(true);
       setError(null);
 
-      // Fetch teacher's courses
-      const teacherCourses = await coursesAPI.getCourses({ teacher_id: user.id });
+      const teacherCourses = await coursesAPI.getCourses({ teacher_id: user.id }); // user.id should match DB teacher_id
+
 
       // Process courses data
       const processedClasses = await Promise.all(

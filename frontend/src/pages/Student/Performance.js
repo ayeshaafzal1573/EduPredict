@@ -10,9 +10,10 @@ const StudentPerformance = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedSemester, setSelectedSemester] = useState('current');
-
-  useEffect(() => {
-    fetchPerformanceData();
+ useEffect(() => {
+    if (user?.id) {
+       fetchPerformanceData();
+    }
   }, [user]);
 
   const fetchPerformanceData = async () => {
@@ -21,9 +22,10 @@ const StudentPerformance = () => {
       setError(null);
 
       const [studentData, performanceTrends, grades] = await Promise.all([
-        studentsAPI.getStudentById('me'),
-        analyticsAPI.getPerformanceTrends('me'),
-        gradesAPI.getGrades({ student_id: 'me', limit: 50 })
+        studentsAPI.getStudentById(user.id),
+        analyticsAPI.getPerformanceTrends(user.id),
+        gradesAPI.getGrades({ student_id: user.id, limit: 50 })
+
       ]);
 
       // Process the data

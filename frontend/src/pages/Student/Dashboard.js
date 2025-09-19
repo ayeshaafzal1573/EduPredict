@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { analyticsAPI, studentsAPI } from '../../services/api';
 import PerformanceChart from '../../components/Charts/PerformanceChart';
@@ -12,46 +12,35 @@ const StudentDashboard = () => {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetchDashboardData();
-  }, [user]);
+    if (!user?.id) return;
 
-  const fetchDashboardData = async () => {
-    try {
+    const fetchData = async (retries = 1) => {
       setLoading(true);
       setError(null);
-      const normalizeStudentData = (data) => {
-        if (data.student_id === 'me' && user?.id) {
-          return { ...data, student_id: user.id };
+
+      try {
+        const [stats, studentData, dropoutPrediction] = await Promise.all([
+          analyticsAPI.getDashboardStats('student'),
+          studentsAPI.getStudentById(user.id),
+          analyticsAPI.getDropoutPrediction(user.id)
+        ]);
+
+        setDashboardData({ stats, student: studentData, dropoutRisk: dropoutPrediction });
+      } catch (err) {
+        if (retries > 0) {
+          console.warn('Retrying fetch due to error:', err);
+          setTimeout(() => fetchData(retries - 1), 1000); // 1s delay
+        } else {
+          setError('Failed to load dashboard data.');
+          toast.error('Failed to load dashboard data');
         }
-        return data;
-      };
+      } finally {
+        setLoading(false);
+      }
+    };
 
-      const [stats, studentData, dropoutPrediction] = await Promise.all([
-        analyticsAPI.getDashboardStats('student'),
-        studentsAPI.getStudentById(user.id),
-        analyticsAPI.getDropoutPrediction(user.id)
-      ]);
-
-      setDashboardData({
-        stats,
-        student: normalizeStudentData(studentData),
-        dropoutRisk: normalizeStudentData(dropoutPrediction)
-      });
-
-
-      setDashboardData({
-        stats,
-        student: studentData,
-        dropoutRisk: dropoutPrediction
-      });
-    } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      setError('Failed to load dashboard data. Please try again.');
-      toast.error('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchData(1);
+  }, [user?.id]); 
 
   if (loading) {
     return (
@@ -64,27 +53,10 @@ const StudentDashboard = () => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="text-red-500 text-6xl mb-4">🎓</div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Dashboard Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={fetchDashboardData}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Reload Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
+
 
   const stats = dashboardData?.stats || {};
   const dropoutRisk = dashboardData?.dropoutRisk || {};
-
   return (
     <div className="space-y-8">
       {/* Header */}
